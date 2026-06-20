@@ -1,0 +1,46 @@
+{
+  "name": "jojoclient",
+  "private": true,
+  "version": "1.2.4",
+  "scripts": {
+    "dev:renderer": "vite --port 5173 --strictPort",
+    "dev:electron": "tsc -p tsconfig.electron.json --watch",
+    "dev:app": "set VITE_DEV_SERVER_URL=http://localhost:5173 && electron .",
+    "dev": "concurrently -k \"npm run dev:electron\" \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:app\"",
+    "build": "vite build && tsc -p tsconfig.electron.json && node scripts/obfuscate-electron.mjs && electron-builder",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "dotenv": "^16.4.7",
+    "electron-updater": "^6.7.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@typescript-eslint/eslint-plugin": "^7.1.1",
+    "@typescript-eslint/parser": "^7.1.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^9.2.1",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "javascript-obfuscator": "^5.4.2",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6",
+    "vite-plugin-electron": "^0.28.6",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vite-plugin-javascript-obfuscator": "^3.1.0",
+    "vitest": "^2.1.0",
+    "wait-on": "^9.0.3"
+  },
+  "main": "dist-electron/electron/main.js"
+}
