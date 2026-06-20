@@ -1,0 +1,42 @@
+// @see - https://www.electron.build/configuration/configuration
+// JojoClient is Windows-only. macOS and Linux targets are intentionally omitted —
+// Java auto-detection, runtime install paths, and the launch pipeline have not
+// been validated on those platforms. Re-add targets only after porting.
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.jojoclient.app",
+  "asar": true,
+  "productName": "JojoClient",
+  // App icon: place a 512x512 icon.png in public/ (generated from icon.svg).
+  // electron-builder auto-converts it to .ico for Windows and .icns for macOS.
+  "icon": "public/icon.png",
+  "publish": {
+    "provider": "github",
+    "owner": "Jonas1903",
+    "repo": "JojoClient"
+  },
+  "directories": {
+    "output": "release/${version}"
+  },
+  "files": [
+    "dist",
+    "dist-electron"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false
+  }
+}
