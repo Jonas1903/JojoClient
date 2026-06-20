@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JojoClient — Minecraft, finally a tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ---- Reset ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    img { display: block; max-width: 100%; height: auto; }
+    a { color: inherit; }
+
+    /* ---- Design Tokens ---- */
+    :root {
+      --bg:           #09090B;
+      --surface:      #111113;
+      --elevated:     #18181B;
+      --card:         #1C1C1F;
+      --card-hover:   #232327;
+      --text:         #FAFAFA;
+      --text-sec:     #A1A1AA;
+      --text-muted:   #52525B;
+      --accent:       #22C55E;
+      --accent-hover: #16A34A;
+      --accent-muted: rgba(34, 197, 94, 0.08);
+      --border:       rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.12);
+      --border-accent: rgba(34, 197, 94, 0.28);
+      --shadow-sm:    0 1px 2px rgba(0,0,0,0.5);
+      --shadow-md:    0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+      --shadow-lg:    0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.4);
+      --radius-sm:    4px;
+      --radius-md:    6px;
+      --radius-lg:    8px;
+      --radius-xl:    10px;
+      --font-mono:    'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+      --transition-fast:   0.12s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.2s  cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow:   0.3s  cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ---- Film Grain ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0.022;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 300px 300px;
+    }
+
+    /* ---- Base ---- */
+    html {
+      zoom: 1.5;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.01em;
+      overflow-x: hidden;
+    }
+
+    /* ---- Nav ---- */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(9, 9, 11, 0.82);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border-bottom: 1px solid var(--border);
+      z-index: 50;
+    }
+
+    .nav-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .nav-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .nav-download {
+      background: var(--accent);
+      color: #052e16;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: background var(--transition-fast);
+      letter-spacing: -0.01em;
+    }
+
+    .nav-download:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ---- Hero ---- */
+    .hero {
+      position: relative;
+      padding: 160px 48px 120px;
+      min-height: 66.667vh;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      background-image: url('public/screenshots/background.jpg');
+      background-size: cover;
+      background-position: center;
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero::after {
+      content: '';
+      background: rgba(9, 9, 11, 0.72);
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 1360px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1.05fr;
+      gap: 96px;
+      align-items: center;
+    }
+
+    .hero-text h1 {
+      font-size: clamp(2.9rem, 4.4vw, 4.4rem);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.13;
+      color: var(--text);
+    }
+
+    .hero-text p {
+      font-size: 16px;
+      color: var(--text-sec);
+      line-height: 1.72;
+      max-width: 480px;
+      margin-top: 24px;
+    }
+
+    .hero-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #052e16;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      padding: 12px 24px;
+      font-size: 14px;
+      text-decoration: none;
+      margin-top: 36px;
+      transition: background var(--transition-fast);
+      letter-spacing: -0.01em;
+    }
+
+    .hero-download:hover {
+      background: var(--accent-hover);
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-sec);
+      padding-right: 16px;
+      margin-right: 16px;
+      border-right: 1px solid var(--border);
+    }
+
+    .hero-meta-item:last-child {
+      border-right: none;
+      padding-right: 0;
+      margin-right: 0;
+    }
+
+    .hero-meta-check {
+      display: inline-flex;
+      align-items: center;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .version-chip {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--accent-muted);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+    }
+
+    .hero-screenshot {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow:
+        0 64px 128px rgba(0,0,0,0.88),
+        0 28px 56px rgba(0,0,0,0.68),
+        0 6px 18px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      transform: perspective(1800px) rotateX(1.8deg) rotateY(-8deg);
+      transform-origin: left center;
+      will-change: transform;
+    }
+
+    .hero-screenshot img {
+      width: 100%;
+      height: auto;
+    }
+
+    /* ---- Section label ---- */
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+    }
+
+    .section-label::after {
+      content: '';
+      width: 32px;
+      height: 1px;
+      background: var(--border-accent);
+    }
+
+    /* ---- Feature sections ---- */
+    .feature-section {
+      padding: 140px 48px;
+    }
+
+    .feature-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      display: grid;
+      gap: 100px;
+      align-items: center;
+    }
+
+    .feature-inner.text-right {
+      grid-template-columns: 1.05fr 1fr;
+    }
+
+    .feature-inner.text-left {
+      grid-template-columns: 1fr 1.05fr;
+    }
+
+    .feature-text h2 {
+      font-size: clamp(2rem, 3vw, 2.9rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: var(--text);
+      margin-top: 20px;
+    }
+
+    .feature-text p {
+      font-size: 16px;
+      color: var(--text-sec);
+      line-height: 1.76;
+      margin-top: 24px;
+      max-width: 520px;
+    }
+
+    .feature-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 32px;
+    }
+
+    .chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--text-sec);
+      transition: border-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .chip:hover {
+      border-color: var(--border-accent);
+      color: var(--accent);
+    }
+
+    .screenshot-frame {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow:
+        0 32px 64px rgba(0,0,0,0.72),
+        0 16px 32px rgba(0,0,0,0.52),
+        0 4px 12px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    .screenshot-frame.tilt-left {
+      transform: perspective(1500px) rotateX(1.3deg) rotateY(-6deg);
+      transform-origin: right center;
+    }
+
+    .screenshot-frame.tilt-right {
+      transform: perspective(1500px) rotateX(1.3deg) rotateY(6deg);
+      transform-origin: left center;
+    }
+
+    .screenshot-frame img {
+      width: 100%;
+      height: auto;
+    }
+
+    /* ---- Stat strip ---- */
+    .stat-strip {
+      padding: 56px 48px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .stat-strip-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+
+    .stat-block {
+      padding-right: 48px;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat-block:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    /* ---- CTA ---- */
+    .cta-section {
+      padding: 160px 48px;
+      text-align: center;
+    }
+
+    .cta-inner {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .cta-inner h2 {
+      font-size: clamp(2rem, 3vw, 2.9rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .cta-inner p {
+      font-size: 16px;
+      color: var(--text-sec);
+      line-height: 1.72;
+      margin-top: 20px;
+    }
+
+    .cta-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #052e16;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      padding: 16px 32px;
+      font-size: 16px;
+      text-decoration: none;
+      margin-top: 36px;
+      transition: background var(--transition-fast);
+      letter-spacing: -0.01em;
+    }
+
+    .cta-download:hover {
+      background: var(--accent-hover);
+    }
+
+    .cta-note {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 16px;
+    }
+
+    /* ---- Footer ---- */
+    footer {
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .footer-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .footer-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-links a:hover {
+      color: var(--text-sec);
+    }
+
+    /* ---- Scroll Reveal ---- */
+    .reveal {
+      opacity: 0;
+      transition:
+        opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.from-left  { transform: translateX(-40px); }
+    .reveal.from-right { transform: translateX(40px); }
+    .reveal.from-below { transform: translateY(28px); }
+    .reveal.visible    { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* ---- Responsive: 1040px ---- */
+    @media (max-width: 1040px) {
+      header { padding: 0; }
+      .nav-inner { padding: 0 24px; }
+
+      .hero {
+        padding-top: 120px;
+        padding-left: 24px;
+        padding-right: 24px;
+        padding-bottom: 80px;
+        min-height: auto;
+      }
+
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 56px;
+      }
+
+      .hero-screenshot {
+        transform: none;
+      }
+
+      .feature-section {
+        padding: 96px 24px;
+      }
+
+      .feature-inner.text-right,
+      .feature-inner.text-left {
+        grid-template-columns: 1fr;
+        gap: 56px;
+      }
+
+      .feature-inner.text-right .feature-text { order: 1; }
+      .feature-inner.text-right .screenshot-frame { order: 0; }
+
+      .feature-inner.text-left .feature-text { order: 1; }
+      .feature-inner.text-left .screenshot-frame { order: 0; }
+
+      .screenshot-frame.tilt-left,
+      .screenshot-frame.tilt-right {
+        transform: none;
+      }
+
+      .stat-strip { padding: 48px 24px; }
+
+      .cta-section {
+        padding: 120px 24px;
+      }
+
+      .footer-inner {
+        padding: 32px 24px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+    }
+
+    /* ---- Responsive: 640px ---- */
+    @media (max-width: 640px) {
+      .hero-text h1 {
+        font-size: clamp(2.2rem, 8vw, 3rem);
+      }
+
+      .hero {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 108px;
+      }
+
+      .hero-meta {
+        gap: 0;
+      }
+
+      .hero-meta-item {
+        padding-right: 12px;
+        margin-right: 12px;
+        margin-bottom: 8px;
+      }
+
+      .feature-section {
+        padding: 72px 20px;
+      }
+
+      .stat-strip { padding: 40px 20px; }
+
+      .stat-strip-inner {
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .stat-block {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 28px;
+      }
+
+      .stat-block:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .feature-chips {
+        gap: 6px;
+      }
+
+      .cta-section {
+        padding: 96px 20px;
+      }
+
+      .footer-inner {
+        padding: 28px 20px;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <header>
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="nav-logo-dot" aria-hidden="true"></span>
+        <span class="nav-logo-text">JojoClient</span>
+      </a>
+      <a href="#download" class="nav-download">Download</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+
+      <div class="hero-text">
+        <h1>Your mods.<br>Every version.</h1>
+        <p>A Fabric-native Minecraft launcher that syncs your mods, profiles, and worlds across every version — without the manual folder shuffling.</p>
+        <a href="#download" class="hero-download" target="_blank" rel="noopener">
+          <!-- Windows logo -->
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor" aria-hidden="true">
+            <rect x="0" y="0" width="6" height="6" rx="0"/>
+            <rect x="7" y="0" width="6" height="6" rx="0"/>
+            <rect x="0" y="7" width="6" height="6" rx="0"/>
+            <rect x="7" y="7" width="6" height="6" rx="0"/>
+          </svg>
+          Download for Windows
+        </a>
+        <div class="hero-meta">
+          <span class="hero-meta-item">
+            <span class="hero-meta-check">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="1.5,5.5 4.5,8.5 9.5,2.5"/>
+              </svg>
+            </span>
+            Fabric
+          </span>
+          <span class="hero-meta-item">
+            <span class="hero-meta-check">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="1.5,5.5 4.5,8.5 9.5,2.5"/>
+              </svg>
+            </span>
+            Auto mod sync
+          </span>
+          <span class="hero-meta-item">
+            <span class="hero-meta-check">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="1.5,5.5 4.5,8.5 9.5,2.5"/>
+              </svg>
+            </span>
+            Crash recovery
+          </span>
+          <span class="hero-meta-item">
+            <span class="version-chip">v1.0</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="hero-screenshot">
+        <img
+          src="public/screenshots/hero.png"
+          alt="JojoClient main window showing the Play tab with installations list and play button"
+          width="800"
+          height="500"
+        >
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Feature 01 — MODS -->
+  <section class="feature-section">
+    <div class="feature-inner text-right">
+
+      <div class="screenshot-frame tilt-left reveal from-left">
+        <img
+          src="public/screenshots/mods.png"
+          alt="JojoClient mods tab showing a list of installed mods with toggles"
+          width="800"
+          height="500"
+        >
+      </div>
+
+      <div class="feature-text reveal from-right">
+        <span class="section-label">MODS</span>
+        <h2>One folder.<br>One source of truth.</h2>
+        <p>Drop a mod into your profile and it appears in every installation that uses it. The launcher resolves Fabric dependencies, deduplicates, and verifies SHA-1 before launch — no more wrestling with mods folders.</p>
+        <div class="feature-chips">
+          <span class="chip">Fabric-native</span>
+          <span class="chip">Auto-sync</span>
+          <span class="chip">Dependency resolver</span>
+          <span class="chip">SHA-1 verified</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Stat strip -->
+  <div class="stat-strip">
+    <div class="stat-strip-inner">
+      <div class="stat-block">
+        <div class="stat-label">Loader</div>
+        <div class="stat-value">Fabric-native</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Verification</div>
+        <div class="stat-value">SHA-1 verified</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Recovery</div>
+        <div class="stat-value">Auto crash recovery</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Portability</div>
+        <div class="stat-value">One-click export</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 02 — PROFILES -->
+  <section class="feature-section">
+    <div class="feature-inner text-left">
+
+      <div class="feature-text reveal from-left">
+        <span class="section-label">PROFILES</span>
+        <h2>Send a world,<br>not a folder.</h2>
+        <p>Profiles bundle your mods, configs, keybinds, and worlds into a single portable file. Export one to a friend, import it on a fresh install, and you're playing the same setup in seconds.</p>
+        <div class="feature-chips">
+          <span class="chip">Multi-profile</span>
+          <span class="chip">Full export</span>
+          <span class="chip">Settings sync</span>
+          <span class="chip">One-click import</span>
+        </div>
+      </div>
+
+      <div class="screenshot-frame tilt-right reveal from-right">
+        <img
+          src="public/screenshots/profile.png"
+          alt="JojoClient profile tab showing profile management and installation list"
+          width="800"
+          height="500"
+        >
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="download">
+    <div class="cta-inner reveal from-below">
+      <h2>Download JojoClient</h2>
+      <p>Free for Windows. No account required. Runs alongside the official launcher.</p>
+      <a href="https://github.com/Jonas1903/JojoClient/releases/latest" class="cta-download" target="_blank" rel="noopener">
+        <!-- Windows logo -->
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor" aria-hidden="true">
+          <rect x="0" y="0" width="6" height="6" rx="0"/>
+          <rect x="7" y="0" width="6" height="6" rx="0"/>
+          <rect x="0" y="7" width="6" height="6" rx="0"/>
+          <rect x="7" y="7" width="6" height="6" rx="0"/>
+        </svg>
+        Download for Windows
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <a href="/" class="footer-logo">
+        <span class="footer-logo-dot" aria-hidden="true"></span>
+        <span class="footer-logo-text">JojoClient</span>
+      </a>
+      <span class="footer-copy">© 2026 JojoClient · Not affiliated with Mojang or Microsoft</span>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="#">Discord</a>
+        <a href="#">Docs</a>
+        <a href="#">Support</a>
+        <a href="#">Privacy</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    const OWNER = 'Jonas1903';
+    const REPO = 'JojoClient';
+    const FALLBACK = `https://github.com/${OWNER}/${REPO}/releases/latest`;
+
+    async function wireDownloadButtons() {
+      let url = FALLBACK;
+      try {
+        const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
+        if (res.ok) {
+          const data = await res.json();
+          const asset = data.assets?.find(a => a.name.endsWith('.exe'));
+          if (asset) url = asset.browser_download_url;
+          const chip = document.querySelector('.version-chip');
+          if (chip && data.tag_name) chip.textContent = data.tag_name;
+        }
+      } catch {}
+      document.querySelectorAll('.hero-download, .cta-download, .nav-download').forEach(el => {
+        el.href = url;
+      });
+    }
+    wireDownloadButtons();
+  </script>
+
+</body>
+</html>
