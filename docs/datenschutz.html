@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datenschutzerklärung — JojoClient</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ---- Reset ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    img { display: block; max-width: 100%; height: auto; }
+    a { color: inherit; }
+
+    /* ---- Design Tokens ---- */
+    :root {
+      --bg:           #09090B;
+      --surface:      #111113;
+      --elevated:     #18181B;
+      --card:         #1C1C1F;
+      --card-hover:   #232327;
+      --text:         #FAFAFA;
+      --text-sec:     #A1A1AA;
+      --text-muted:   #52525B;
+      --accent:       #22C55E;
+      --accent-hover: #16A34A;
+      --accent-muted: rgba(34, 197, 94, 0.08);
+      --border:       rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.12);
+      --border-accent: rgba(34, 197, 94, 0.28);
+      --shadow-sm:    0 1px 2px rgba(0,0,0,0.5);
+      --shadow-md:    0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+      --shadow-lg:    0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.4);
+      --radius-sm:    4px;
+      --radius-md:    6px;
+      --radius-lg:    8px;
+      --radius-xl:    10px;
+      --font-mono:    'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+      --transition-fast:   0.12s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.2s  cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow:   0.3s  cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ---- Film Grain ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0.022;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 300px 300px;
+    }
+
+    /* ---- Base ---- */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.01em;
+      overflow-x: hidden;
+    }
+
+    /* ---- Nav ---- */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(9, 9, 11, 0.82);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border-bottom: 1px solid var(--border);
+      z-index: 50;
+    }
+
+    .nav-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .nav-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .nav-download {
+      background: var(--accent);
+      color: #052e16;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: background var(--transition-fast);
+      letter-spacing: -0.01em;
+    }
+
+    .nav-download:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ---- Legal Content ---- */
+    .legal-page {
+      padding: 120px 48px 80px;
+    }
+
+    .legal-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .legal-inner h1 {
+      font-size: clamp(2rem, 3vw, 2.9rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 40px;
+    }
+
+    .legal-inner h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 12px;
+      margin-top: 44px;
+    }
+
+    .legal-inner h2:first-of-type {
+      margin-top: 0;
+    }
+
+    .legal-inner h2::before {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 24px;
+    }
+
+    .legal-inner h2:first-of-type::before {
+      display: none;
+    }
+
+    .legal-inner h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-top: 32px;
+      margin-bottom: 10px;
+    }
+
+    .legal-inner p {
+      font-size: 14px;
+      color: var(--text-sec);
+      line-height: 1.7;
+      margin: 0 0 14px 0;
+    }
+
+    .legal-inner a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .legal-inner a:hover {
+      color: var(--accent-hover);
+    }
+
+    .legal-inner ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px 0;
+    }
+
+    .legal-inner ul li {
+      position: relative;
+      padding-left: 16px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--text-sec);
+      line-height: 1.6;
+    }
+
+    .legal-inner ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .legal-inner ul.index {
+      margin-bottom: 40px;
+    }
+
+    .legal-inner ul.index li {
+      padding-left: 0;
+      margin-bottom: 6px;
+    }
+
+    .legal-inner ul.index li::before {
+      display: none;
+    }
+
+    .legal-inner ul.index a.index-link {
+      font-size: 13px;
+      color: var(--text-sec);
+      transition: color var(--transition-fast);
+    }
+
+    .legal-inner ul.index a.index-link:hover {
+      color: var(--accent);
+    }
+
+    .legal-inner strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ---- Footer ---- */
+    footer {
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .footer-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .footer-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-links a:hover {
+      color: var(--text-sec);
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 1040px) {
+      header { padding: 0; }
+      .nav-inner { padding: 0 24px; }
+      .legal-page { padding: 108px 24px 64px; }
+      .footer-inner {
+        padding: 32px 24px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .legal-page { padding: 100px 20px 48px; }
+      .footer-inner { padding: 28px 20px; }
+      .footer-links { flex-wrap: wrap; justify-content: center; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <header>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <span class="nav-logo-dot" aria-hidden="true"></span>
+        <span class="nav-logo-text">JojoClient</span>
+      </a>
+      <a href="index.html#download" class="nav-download">Download</a>
+    </div>
+  </header>
+
+  <!-- Legal Content -->
+  <main class="legal-page">
+    <div class="legal-inner">
+
+<h1>Datenschutzerkl&auml;rung</h1>
+<h2 id="m716">Pr&auml;ambel</h2>
+<p>Mit der folgenden Datenschutzerkl&auml;rung m&ouml;chten wir Sie dar&uuml;ber aufkl&auml;ren, welche Arten Ihrer personenbezogenen Daten (nachfolgend auch kurz als "Daten" bezeichnet) wir zu welchen Zwecken und in welchem Umfang verarbeiten. Die Datenschutzerkl&auml;rung gilt f&uuml;r alle von uns durchgef&uuml;hrten Verarbeitungen personenbezogener Daten, sowohl im Rahmen der Erbringung unserer Leistungen als auch insbesondere auf unseren Webseiten, in mobilen Applikationen sowie innerhalb externer Onlinepr&auml;senzen, wie z.&nbsp;B. unserer Social-Media-Profile (nachfolgend zusammenfassend bezeichnet als "Onlineangebot").</p>
+<p>Die verwendeten Begriffe sind nicht geschlechtsspezifisch.</p>
+
+<p>Stand: 20. Juni 2026</p>
+
+<h2>Inhalts&uuml;bersicht</h2>
+<ul class="index">
+  <li><a class="index-link" href="#m716">Pr&auml;ambel</a></li>
+  <li><a class="index-link" href="#m3">Verantwortlicher</a></li>
+  <li><a class="index-link" href="#mOverview">&Uuml;bersicht der Verarbeitungen</a></li>
+  <li><a class="index-link" href="#m2427">Ma&szlig;gebliche Rechtsgrundlagen</a></li>
+  <li><a class="index-link" href="#m27">Sicherheitsma&szlig;nahmen</a></li>
+  <li><a class="index-link" href="#m25">&Uuml;bermittlung von personenbezogenen Daten</a></li>
+  <li><a class="index-link" href="#m24">Internationale Datentransfers</a></li>
+  <li><a class="index-link" href="#m12">Allgemeine Informationen zur Datenspeicherung und L&ouml;schung</a></li>
+  <li><a class="index-link" href="#m10">Rechte der betroffenen Personen</a></li>
+  <li><a class="index-link" href="#m326">Zahlungsverfahren</a></li>
+  <li><a class="index-link" href="#m225">Bereitstellung des Onlineangebots und Webhosting</a></li>
+  <li><a class="index-link" href="#m134">Einsatz von Cookies</a></li>
+  <li><a class="index-link" href="#m263">Webanalyse, Monitoring und Optimierung</a></li>
+  <li><a class="index-link" href="#m136">Pr&auml;senzen in sozialen Netzwerken (Social Media)</a></li>
+  <li><a class="index-link" href="#m2324">Datenschutzinformationen f&uuml;r Hinweisgeber</a></li>
+  <li><a class="index-link" href="#m15">&Auml;nderung und Aktualisierung</a></li>
+  <li><a class="index-link" href="#m42">Begriffsdefinitionen</a></li>
+</ul>
+
+<h2 id="m3">Verantwortlicher</h2>
+<p>Torsten Frahm<br>TFR Consulting UG<br>22359 Hamburg<br>Kl&ouml;pperstieg 8</p>
+<p>E-Mail-Adresse: <a href="mailto:info@jojoclient.com">info@jojoclient.com</a></p>
+<p>Impressum: <a href="impressum.html">jojoclient.com/impressum</a></p>
+
+<h2 id="mOverview">&Uuml;bersicht der Verarbeitungen</h2>
+<p>Die nachfolgende &Uuml;bersicht fasst die Arten der verarbeiteten Daten und die Zwecke ihrer Verarbeitung zusammen und verweist auf die betroffenen Personen.</p>
+
+<h3>Arten der verarbeiteten Daten</h3>
+<ul>
+  <li>Bestandsdaten.</li>
+  <li>Besch&auml;ftigtendaten.</li>
+  <li>Zahlungsdaten.</li>
+  <li>Kontaktdaten.</li>
+  <li>Inhaltsdaten.</li>
+  <li>Vertragsdaten.</li>
+  <li>Nutzungsdaten.</li>
+  <li>Meta-, Kommunikations- und Verfahrensdaten.</li>
+  <li>Protokolldaten.</li>
+</ul>
+
+<h3>Kategorien betroffener Personen</h3>
+<ul>
+  <li>Leistungsempf&auml;nger und Auftraggeber.</li>
+  <li>Besch&auml;ftigte.</li>
+  <li>Interessenten.</li>
+  <li>Nutzer.</li>
+  <li>Gesch&auml;fts- und Vertragspartner.</li>
+  <li>Dritte Personen.</li>
+  <li>Hinweisgeber.</li>
+</ul>
+
+<h3>Zwecke der Verarbeitung</h3>
+<ul>
+  <li>Erbringung vertraglicher Leistungen und Erf&uuml;llung vertraglicher Pflichten.</li>
+  <li>Kommunikation.</li>
+  <li>Sicherheitsma&szlig;nahmen.</li>
+  <li>Reichweitenmessung.</li>
+  <li>Feedback.</li>
+  <li>Profile mit nutzerbezogenen Informationen.</li>
+  <li>Bereitstellung unseres Onlineangebotes und Nutzerfreundlichkeit.</li>
+  <li>Informationstechnische Infrastruktur.</li>
+  <li>Hinweisgeberschutz.</li>
+  <li>&Ouml;ffentlichkeitsarbeit.</li>
+  <li>Gesch&auml;ftsprozesse und betriebswirtschaftliche Verfahren.</li>
+</ul>
+
+<h2 id="m2427">Ma&szlig;gebliche Rechtsgrundlagen</h2>
+<p><strong>Ma&szlig;gebliche Rechtsgrundlagen nach der DSGVO:</strong> Im Folgenden erhalten Sie eine &Uuml;bersicht der Rechtsgrundlagen der DSGVO, auf deren Basis wir personenbezogene Daten verarbeiten. Bitte nehmen Sie zur Kenntnis, dass neben den Regelungen der DSGVO nationale Datenschutzvorgaben in Ihrem bzw. unserem Wohn- oder Sitzland gelten k&ouml;nnen. Sollten ferner im Einzelfall speziellere Rechtsgrundlagen ma&szlig;geblich sein, teilen wir Ihnen diese in der Datenschutzerkl&auml;rung mit.</p>
+<ul>
+  <li><strong>Einwilligung (Art. 6 Abs. 1 S. 1 lit. a) DSGVO)</strong> - Die betroffene Person hat ihre Einwilligung in die Verarbeitung der sie betreffenden personenbezogenen Daten f&uuml;r einen spezifischen Zweck oder mehrere bestimmte Zwecke gegeben.</li>
+  <li><strong>Vertragserf&uuml;llung und vorvertragliche Anfragen (Art. 6 Abs. 1 S. 1 lit. b) DSGVO)</strong> - Die Verarbeitung ist f&uuml;r die Erf&uuml;llung eines Vertrags, dessen Vertragspartei die betroffene Person ist, oder zur Durchf&uuml;hrung vorvertraglicher Ma&szlig;nahmen erforderlich, die auf Anfrage der betroffenen Person erfolgen.</li>
+  <li><strong>Rechtliche Verpflichtung (Art. 6 Abs. 1 S. 1 lit. c) DSGVO)</strong> - Die Verarbeitung ist zur Erf&uuml;llung einer rechtlichen Verpflichtung erforderlich, der der Verantwortliche unterliegt.</li>
+  <li><strong>Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f) DSGVO)</strong> - die Verarbeitung ist zur Wahrung der berechtigten Interessen des Verantwortlichen oder eines Dritten notwendig, vorausgesetzt, dass die Interessen, Grundrechte und Grundfreiheiten der betroffenen Person, die den Schutz personenbezogener Daten verlangen, nicht &uuml;berwiegen.</li>
+</ul>
+<p><strong>Nationale Datenschutzregelungen in Deutschland:</strong> Zus&auml;tzlich zu den Datenschutzregelungen der DSGVO gelten nationale Regelungen zum Datenschutz in Deutschland. Hierzu geh&ouml;rt insbesondere das Gesetz zum Schutz vor Missbrauch personenbezogener Daten bei der Datenverarbeitung (Bundesdatenschutzgesetz &ndash; BDSG). Das BDSG enth&auml;lt insbesondere Spezialregelungen zum Recht auf Auskunft, zum Recht auf L&ouml;schung, zum Widerspruchsrecht, zur Verarbeitung besonderer Kategorien personenbezogener Daten, zur Verarbeitung f&uuml;r andere Zwecke und zur &Uuml;bermittlung sowie automatisierten Entscheidungsfindung im Einzelfall einschlie&szlig;lich Profiling. Ferner k&ouml;nnen Landesdatenschutzgesetze der einzelnen Bundesl&auml;nder zur Anwendung gelangen.</p>
+
+<h2 id="m27">Sicherheitsma&szlig;nahmen</h2>
+<p>Wir treffen nach Ma&szlig;gabe der gesetzlichen Vorgaben unter Ber&uuml;cksichtigung des Stands der Technik, der Implementierungskosten und der Art, des Umfangs, der Umst&auml;nde und der Zwecke der Verarbeitung sowie der unterschiedlichen Eintrittswahrscheinlichkeiten und des Ausma&szlig;es der Bedrohung der Rechte und Freiheiten nat&uuml;rlicher Personen geeignete technische und organisatorische Ma&szlig;nahmen, um ein dem Risiko angemessenes Schutzniveau zu gew&auml;hrleisten.</p>
+<p>Zu den Ma&szlig;nahmen geh&ouml;ren insbesondere die Sicherung der Vertraulichkeit, Integrit&auml;t und Verf&uuml;gbarkeit von Daten durch Kontrolle des physischen und elektronischen Zugangs zu den Daten als auch des sie betreffenden Zugriffs, der Eingabe, der Weitergabe, der Sicherung der Verf&uuml;gbarkeit und ihrer Trennung. Des Weiteren haben wir Verfahren eingerichtet, die eine Wahrnehmung von Betroffenenrechten, die L&ouml;schung von Daten und Reaktionen auf die Gef&auml;hrdung der Daten gew&auml;hrleisten. Ferner ber&uuml;cksichtigen wir den Schutz personenbezogener Daten bereits bei der Entwicklung bzw. Auswahl von Hardware, Software sowie Verfahren entsprechend dem Prinzip des Datenschutzes, durch Technikgestaltung und durch datenschutzfreundliche Voreinstellungen.</p>
+<p>Sicherung von Online-Verbindungen durch TLS-/SSL-Verschl&uuml;sselungstechnologie (HTTPS): Um die Daten der Nutzer, die &uuml;ber unsere Online-Dienste &uuml;bertragen werden, vor unerlaubten Zugriffen zu sch&uuml;tzen, setzen wir auf die TLS-/SSL-Verschl&uuml;sselungstechnologie. Secure Sockets Layer (SSL) und Transport Layer Security (TLS) sind die Eckpfeiler der sicheren Daten&uuml;bertragung im Internet. Diese Technologien verschl&uuml;sseln die Informationen, die zwischen der Website oder App und dem Browser des Nutzers (oder zwischen zwei Servern) &uuml;bertragen werden, wodurch die Daten vor unbefugtem Zugriff gesch&uuml;tzt sind. TLS, als die weiterentwickelte und sicherere Version von SSL, gew&auml;hrleistet, dass alle Daten&uuml;bertragungen den h&ouml;chsten Sicherheitsstandards entsprechen. Wenn eine Website durch ein SSL-/TLS-Zertifikat gesichert ist, wird dies durch die Anzeige von HTTPS in der URL signalisiert. Dies dient als ein Indikator f&uuml;r die Nutzer, dass ihre Daten sicher und verschl&uuml;sselt &uuml;bertragen werden.</p>
+
+<h2 id="m25">&Uuml;bermittlung von personenbezogenen Daten</h2>
+<p>Im Rahmen unserer Verarbeitung von personenbezogenen Daten kommt es vor, dass diese an andere Stellen, Unternehmen, rechtlich selbstst&auml;ndige Organisationseinheiten oder Personen &uuml;bermittelt beziehungsweise ihnen gegen&uuml;ber offengelegt werden. Zu den Empf&auml;ngern dieser Daten k&ouml;nnen z.&nbsp;B. mit IT-Aufgaben beauftragte Dienstleister geh&ouml;ren oder Anbieter von Diensten und Inhalten, die in eine Website eingebunden sind. In solchen F&auml;llen beachten wir die gesetzlichen Vorgaben und schlie&szlig;en insbesondere entsprechende Vertr&auml;ge bzw. Vereinbarungen, die dem Schutz Ihrer Daten dienen, mit den Empf&auml;ngern Ihrer Daten ab.</p>
+
+<h2 id="m24">Internationale Datentransfers</h2>
+<p>Datenverarbeitung in Drittl&auml;ndern: Sofern wir Daten in ein Drittland (d. h. au&szlig;erhalb der Europ&auml;ischen Union (EU) oder des Europ&auml;ischen Wirtschaftsraums (EWR)) &uuml;bermitteln oder dies im Rahmen der Nutzung von Diensten Dritter oder der Offenlegung bzw. &Uuml;bermittlung von Daten an andere Personen, Stellen oder Unternehmen geschieht (was erkennbar wird anhand der Postadresse des jeweiligen Anbieters oder wenn in der Datenschutzerkl&auml;rung ausdr&uuml;cklich auf den Datentransfer in Drittl&auml;nder hingewiesen wird), erfolgt dies stets im Einklang mit den gesetzlichen Vorgaben.</p>
+<p>F&uuml;r Daten&uuml;bermittlungen in die USA st&uuml;tzen wir uns vorrangig auf das Data Privacy Framework (DPF), welches durch einen Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023 als sicherer Rechtsrahmen anerkannt wurde. Zus&auml;tzlich haben wir mit den jeweiligen Anbietern Standardvertragsklauseln abgeschlossen, die den Vorgaben der EU-Kommission entsprechen und vertragliche Verpflichtungen zum Schutz Ihrer Daten festlegen.</p>
+<p>Diese zweifache Absicherung gew&auml;hrleistet einen umfassenden Schutz Ihrer Daten: Das DPF bildet die prim&auml;re Schutzebene, w&auml;hrend die Standardvertragsklauseln als zus&auml;tzliche Sicherheit dienen. Sollten sich &Auml;nderungen im Rahmen des DPF ergeben, greifen die Standardvertragsklauseln als zuverl&auml;ssige R&uuml;ckfalloption ein. So stellen wir sicher, dass Ihre Daten auch bei etwaigen politischen oder rechtlichen Ver&auml;nderungen stets angemessen gesch&uuml;tzt bleiben.</p>
+<p>Bei den einzelnen Diensteanbietern informieren wir Sie dar&uuml;ber, ob sie nach dem DPF zertifiziert sind und ob Standardvertragsklauseln vorliegen. Weitere Informationen zum DPF und eine Liste der zertifizierten Unternehmen finden Sie auf der Website des US-Handelsministeriums unter <a href="https://www.dataprivacyframework.gov/" target="_blank" rel="noopener">https://www.dataprivacyframework.gov/</a> (in englischer Sprache).</p>
+<p>F&uuml;r Daten&uuml;bermittlungen in andere Drittl&auml;nder gelten entsprechende Sicherheitsma&szlig;nahmen, insbesondere Standardvertragsklauseln, ausdr&uuml;ckliche Einwilligungen oder gesetzlich erforderliche &Uuml;bermittlungen. Informationen zu Drittlandtransfers und geltenden Angemessenheitsbeschl&uuml;ssen k&ouml;nnen Sie dem Informationsangebot der EU-Kommission entnehmen: <a href="https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection_en?prefLang=de" target="_blank" rel="noopener">https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection_en?prefLang=de.</a></p>
+
+<h2 id="m12">Allgemeine Informationen zur Datenspeicherung und L&ouml;schung</h2>
+<p>Wir l&ouml;schen personenbezogene Daten, die wir verarbeiten, gem&auml;&szlig; den gesetzlichen Bestimmungen, sobald die zugrundeliegenden Einwilligungen widerrufen werden oder keine weiteren rechtlichen Grundlagen f&uuml;r die Verarbeitung bestehen. Dies betrifft F&auml;lle, in denen der urspr&uuml;ngliche Verarbeitungszweck entf&auml;llt oder die Daten nicht mehr ben&ouml;tigt werden. Ausnahmen von dieser Regelung bestehen, wenn gesetzliche Pflichten oder besondere Interessen eine l&auml;ngere Aufbewahrung oder Archivierung der Daten erfordern.</p>
+<p>Insbesondere m&uuml;ssen Daten, die aus handels- oder steuerrechtlichen Gr&uuml;nden aufbewahrt werden m&uuml;ssen oder deren Speicherung notwendig ist zur Rechtsverfolgung oder zum Schutz der Rechte anderer nat&uuml;rlicher oder juristischer Personen, entsprechend archiviert werden.</p>
+<p>Unsere Datenschutzhinweise enthalten zus&auml;tzliche Informationen zur Aufbewahrung und L&ouml;schung von Daten, die speziell f&uuml;r bestimmte Verarbeitungsprozesse gelten.</p>
+<p>Bei mehreren Angaben zur Aufbewahrungsdauer oder L&ouml;schungsfristen eines Datums, ist stets die l&auml;ngste Frist ma&szlig;geblich. Daten, die nicht mehr f&uuml;r den urspr&uuml;nglich vorgesehenen Zweck, sondern aufgrund gesetzlicher Vorgaben oder anderer Gr&uuml;nde aufbewahrt werden, verarbeiten wir ausschlie&szlig;lich zu den Gr&uuml;nden, die ihre Aufbewahrung rechtfertigen.</p>
+<p>Aufbewahrung und L&ouml;schung von Daten: Die folgenden allgemeinen Fristen gelten f&uuml;r die Aufbewahrung und Archivierung nach deutschem Recht:</p>
+<ul>
+  <li>10 Jahre - Aufbewahrungsfrist f&uuml;r B&uuml;cher und Aufzeichnungen, Jahresabschl&uuml;sse, Inventare, Lageberichte, Er&ouml;ffnungsbilanz sowie die zu ihrem Verst&auml;ndnis erforderlichen Arbeitsanweisungen und sonstigen Organisationsunterlagen (&sect; 147 Abs. 1 Nr. 1 i.V.m. Abs. 3 AO, &sect; 14b Abs. 1 UStG, &sect; 257 Abs. 1 Nr. 1 i.V.m. Abs. 4 HGB).</li>
+  <li>8 Jahre - Buchungsbelege, wie z.&nbsp;B. Rechnungen und Kostenbelege (&sect; 147 Abs. 1 Nr. 4 und 4a i.V.m. Abs. 3 Satz 1 AO sowie &sect; 257 Abs. 1 Nr. 4 i.V.m. Abs. 4 HGB).</li>
+  <li>6 Jahre - &Uuml;brige Gesch&auml;ftsunterlagen: empfangene Handels- oder Gesch&auml;ftsbriefe, Wiedergaben der abgesandten Handels- oder Gesch&auml;ftsbriefe, sonstige Unterlagen, soweit sie f&uuml;r die Besteuerung von Bedeutung sind, z.&nbsp;B. Stundenlohnzettel, Betriebsabrechnungsb&ouml;gen, Kalkulationsunterlagen, Preisauszeichnungen, aber auch Lohnabrechnungsunterlagen, soweit sie nicht bereits Buchungsbelege sind und Kassenstreifen (&sect; 147 Abs. 1 Nr. 2, 3, 5 i.V.m. Abs. 3 AO, &sect; 257 Abs. 1 Nr. 2 u. 3 i.V.m. Abs. 4 HGB).</li>
+  <li>3 Jahre - Daten, die erforderlich sind, um potenzielle Gew&auml;hrleistungs- und Schadensersatzanspr&uuml;che oder &auml;hnliche vertragliche Anspr&uuml;che und Rechte zu ber&uuml;cksichtigen sowie damit verbundene Anfragen zu bearbeiten, basierend auf fr&uuml;heren Gesch&auml;ftserfahrungen und &uuml;blichen Branchenpraktiken, werden f&uuml;r die Dauer der regul&auml;ren gesetzlichen Verj&auml;hrungsfrist von drei Jahren gespeichert (&sect;&sect; 195, 199 BGB).</li>
+</ul>
+<p>Fristbeginn mit Ablauf des Jahres: Beginnt eine Frist nicht ausdr&uuml;cklich zu einem bestimmten Datum und betr&auml;gt sie mindestens ein Jahr, so startet sie automatisch am Ende des Kalenderjahres, in dem das fristausl&ouml;sende Ereignis eingetreten ist. Im Fall laufender Vertragsverh&auml;ltnisse, in deren Rahmen Daten gespeichert werden, ist das fristausl&ouml;sende Ereignis der Zeitpunkt des Wirksamwerdens der K&uuml;ndigung oder sonstige Beendigung des Rechtsverh&auml;ltnisses.</p>
+
+<h2 id="m10">Rechte der betroffenen Personen</h2>
+<p>Rechte der betroffenen Personen aus der DSGVO: Ihnen stehen als Betroffene nach der DSGVO verschiedene Rechte zu, die sich insbesondere aus Art. 15 bis 21 DSGVO ergeben:</p>
+<ul>
+  <li><strong>Widerspruchsrecht: Sie haben das Recht, aus Gr&uuml;nden, die sich aus Ihrer besonderen Situation ergeben, jederzeit gegen die Verarbeitung der Sie betreffenden personenbezogenen Daten, die aufgrund von Art. 6 Abs. 1 lit. e oder f DSGVO erfolgt, Widerspruch einzulegen; dies gilt auch f&uuml;r ein auf diese Bestimmungen gest&uuml;tztes Profiling. Werden die Sie betreffenden personenbezogenen Daten verarbeitet, um Direktwerbung zu betreiben, haben Sie das Recht, jederzeit Widerspruch gegen die Verarbeitung der Sie betreffenden personenbezogenen Daten zum Zwecke derartiger Werbung einzulegen; dies gilt auch f&uuml;r das Profiling, soweit es mit solcher Direktwerbung in Verbindung steht.</strong></li>
+  <li><strong>Widerrufsrecht bei Einwilligungen:</strong> Sie haben das Recht, erteilte Einwilligungen jederzeit zu widerrufen.</li>
+  <li><strong>Auskunftsrecht:</strong> Sie haben das Recht, eine Best&auml;tigung dar&uuml;ber zu verlangen, ob betreffende Daten verarbeitet werden und auf Auskunft &uuml;ber diese Daten sowie auf weitere Informationen und Kopie der Daten entsprechend den gesetzlichen Vorgaben.</li>
+  <li><strong>Recht auf Berichtigung:</strong> Sie haben entsprechend den gesetzlichen Vorgaben das Recht, die Vervollst&auml;ndigung der Sie betreffenden Daten oder die Berichtigung der Sie betreffenden unrichtigen Daten zu verlangen.</li>
+  <li><strong>Recht auf L&ouml;schung und Einschr&auml;nkung der Verarbeitung:</strong> Sie haben nach Ma&szlig;gabe der gesetzlichen Vorgaben das Recht, zu verlangen, dass Sie betreffende Daten unverz&uuml;glich gel&ouml;scht werden, bzw. alternativ nach Ma&szlig;gabe der gesetzlichen Vorgaben eine Einschr&auml;nkung der Verarbeitung der Daten zu verlangen.</li>
+  <li><strong>Recht auf Daten&uuml;bertragbarkeit:</strong> Sie haben das Recht, Sie betreffende Daten, die Sie uns bereitgestellt haben, nach Ma&szlig;gabe der gesetzlichen Vorgaben in einem strukturierten, g&auml;ngigen und maschinenlesbaren Format zu erhalten oder deren &Uuml;bermittlung an einen anderen Verantwortlichen zu fordern.</li>
+  <li><strong>Beschwerde bei Aufsichtsbeh&ouml;rde:</strong> Sie haben unbeschadet eines anderweitigen verwaltungsrechtlichen oder gerichtlichen Rechtsbehelfs das Recht auf Beschwerde bei einer Aufsichtsbeh&ouml;rde, insbesondere in dem Mitgliedstaat ihres gew&ouml;hnlichen Aufenthaltsorts, ihres Arbeitsplatzes oder des Orts des mutma&szlig;lichen Versto&szlig;es, wenn Sie der Ansicht sind, dass die Verarbeitung der Sie betreffenden personenbezogenen Daten gegen die DSGVO verst&ouml;&szlig;t.</li>
+</ul>
+
+<h2 id="m326">Zahlungsverfahren</h2>
+<p>Im Rahmen von Vertrags- und sonstigen Rechtsbeziehungen, aufgrund gesetzlicher Pflichten oder sonst auf Grundlage unserer berechtigten Interessen bieten wir den betroffenen Personen effiziente und sichere Zahlungsm&ouml;glichkeiten an und setzen hierzu neben Banken und Kreditinstituten weitere Dienstleister ein (zusammenfassend "Zahlungsdienstleister"). Der Zahlungsverkehr erfolgt dabei entsprechend dem Stand der Technik ausschlie&szlig;lich &uuml;ber verschl&uuml;sselte Verbindungen, sodass die eingegebenen Daten w&auml;hrend der &Uuml;bermittlung vor unbefugtem Zugriff gesch&uuml;tzt sind.</p>
+<p>Zu den durch die Zahlungsdienstleister verarbeiteten Daten geh&ouml;ren Bestandsdaten, wie z.&nbsp;B. der Name und die Adresse, Bankdaten, wie z.&nbsp;B. Kontonummern oder Kreditkartennummern, Passw&ouml;rter, TANs und Pr&uuml;fsummen sowie die Vertrags-, Summen- und empf&auml;ngerbezogenen Angaben. Die Angaben sind erforderlich, um die Transaktionen durchzuf&uuml;hren. Die eingegebenen Daten werden jedoch nur durch die Zahlungsdienstleister verarbeitet und bei diesen gespeichert. D.&nbsp;h., wir erhalten keine konto- oder kreditkartenbezogenen Informationen, sondern lediglich Informationen mit Best&auml;tigung oder Negativbeauskunftung der Zahlung. Unter Umst&auml;nden werden die Daten seitens der Zahlungsdienstleister an Wirtschaftsauskunfteien &uuml;bermittelt. Diese &Uuml;bermittlung bezweckt die Identit&auml;ts- und Bonit&auml;tspr&uuml;fung. Hierzu verweisen wir auf die AGB und die Datenschutzhinweise der Zahlungsdienstleister.</p>
+<p>F&uuml;r die Zahlungsgesch&auml;fte gelten die Gesch&auml;ftsbedingungen und die Datenschutzhinweise der jeweiligen Zahlungsdienstleister, welche innerhalb der jeweiligen Webseiten bzw. Transaktionsapplikationen abrufbar sind. Wir verweisen auf diese ebenfalls zwecks weiterer Informationen und Geltendmachung von Widerrufs-, Auskunfts- und anderen Betroffenenrechten.</p>
+<p><strong>PayPal:</strong> Zahlungsdienstleistungen (technische Anbindung von Online-Bezahlmethoden) (z.&nbsp;B. PayPal, PayPal Plus, Braintree); <strong>Dienstanbieter:</strong> PayPal (Europe) S.&agrave; r.l. et Cie, S.C.A., 22-24 Boulevard Royal, L-2449 Luxemburg; <strong>Rechtsgrundlagen:</strong> Vertragserf&uuml;llung und vorvertragliche Anfragen (Art. 6 Abs. 1 S. 1 lit. b) DSGVO); <strong>Website:</strong> <a href="https://www.paypal.com/de" target="_blank" rel="noopener">https://www.paypal.com/de</a>. <strong>Datenschutzerkl&auml;rung:</strong> <a href="https://www.paypal.com/de/webapps/mpp/ua/privacy-full" target="_blank" rel="noopener">https://www.paypal.com/de/webapps/mpp/ua/privacy-full</a>.</p>
+
+<h2 id="m225">Bereitstellung des Onlineangebots und Webhosting</h2>
+<p>Wir verarbeiten die Daten der Nutzer, um ihnen unsere Online-Dienste zur Verf&uuml;gung stellen zu k&ouml;nnen. Zu diesem Zweck verarbeiten wir die IP-Adresse des Nutzers, die notwendig ist, um die Inhalte und Funktionen unserer Online-Dienste an den Browser oder das Endger&auml;t der Nutzer zu &uuml;bermitteln.</p>
+<p><strong>Bereitstellung Onlineangebot auf gemietetem Speicherplatz:</strong> F&uuml;r die Bereitstellung unseres Onlineangebotes nutzen wir Speicherplatz, Rechenkapazit&auml;t und Software, die wir von einem entsprechenden Serveranbieter (auch "Webhoster" genannt) mieten oder anderweitig beziehen; <strong>Rechtsgrundlagen:</strong> Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f) DSGVO).</p>
+<p><strong>Erhebung von Zugriffsdaten und Logfiles:</strong> Der Zugriff auf unser Onlineangebot wird in Form von sogenannten "Server-Logfiles" protokolliert. Zu den Serverlogfiles k&ouml;nnen die Adresse und der Name der abgerufenen Webseiten und Dateien, Datum und Uhrzeit des Abrufs, &uuml;bertragene Datenmengen, Meldung &uuml;ber erfolgreichen Abruf, Browsertyp nebst Version, das Betriebssystem des Nutzers, Referrer URL (die zuvor besuchte Seite) und im Regelfall IP-Adressen und der anfragende Provider geh&ouml;ren. Die Serverlogfiles k&ouml;nnen zum einen zu Sicherheitszwecken eingesetzt werden, z.&nbsp;B. um eine &Uuml;berlastung der Server zu vermeiden (insbesondere im Fall von missbr&auml;uchlichen Angriffen, sogenannten DDoS-Attacken) und zum anderen, um die Auslastung der Server und ihre Stabilit&auml;t sicherzustellen. <strong>Rechtsgrundlagen:</strong> Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f) DSGVO). <strong>L&ouml;schung von Daten:</strong> Logfile-Informationen werden f&uuml;r die Dauer von maximal 30 Tagen gespeichert und danach gel&ouml;scht oder anonymisiert. Daten, deren weitere Aufbewahrung zu Beweiszwecken erforderlich ist, sind bis zur endg&uuml;ltigen Kl&auml;rung des jeweiligen Vorfalls von der L&ouml;schung ausgenommen.</p>
+
+<h2 id="m134">Einsatz von Cookies</h2>
+<p>Unter dem Begriff &bdquo;Cookies&ldquo; werden Funktionen, die Informationen auf Endger&auml;ten der Nutzer speichern und aus ihnen auslesen, verstanden. Cookies k&ouml;nnen ferner in Bezug auf unterschiedliche Anliegen Einsatz finden, etwa zu Zwecken der Funktionsf&auml;higkeit, der Sicherheit und des Komforts von Onlineangeboten sowie der Erstellung von Analysen der Besucherstr&ouml;me. Wir verwenden Cookies gem&auml;&szlig; den gesetzlichen Vorschriften. Dazu holen wir, wenn erforderlich, vorab die Zustimmung der Nutzer ein. Ist eine Zustimmung nicht notwendig, setzen wir auf unsere berechtigten Interessen. Dies gilt, wenn das Speichern und Auslesen von Informationen unerl&auml;sslich ist, um ausdr&uuml;cklich angeforderte Inhalte und Funktionen bereitstellen zu k&ouml;nnen. Dazu z&auml;hlen etwa die Speicherung von Einstellungen sowie die Sicherstellung der Funktionalit&auml;t und Sicherheit unseres Onlineangebots. Die Einwilligung kann jederzeit widerrufen werden. Wir informieren klar &uuml;ber deren Umfang und welche Cookies genutzt werden.</p>
+<p><strong>Hinweise zu datenschutzrechtlichen Rechtsgrundlagen:</strong> Ob wir personenbezogene Daten mithilfe von Cookies verarbeiten, h&auml;ngt von einer Einwilligung ab. Liegt eine Einwilligung vor, dient sie als Rechtsgrundlage. Ohne Einwilligung st&uuml;tzen wir uns auf unsere berechtigten Interessen, die vorstehend in diesem Abschnitt und im Kontext der jeweiligen Dienste und Verfahren erl&auml;utert sind.</p>
+<p><strong>Speicherdauer:</strong> Im Hinblick auf die Speicherdauer werden die folgenden Arten von Cookies unterschieden:</p>
+<ul>
+  <li><strong>Tempor&auml;re Cookies (auch: Session- oder Sitzungscookies):</strong> Tempor&auml;re Cookies werden sp&auml;testens gel&ouml;scht, nachdem ein Nutzer ein Onlineangebot verlassen und sein Endger&auml;t (z.&nbsp;B. Browser oder mobile Applikation) geschlossen hat.</li>
+  <li><strong>Permanente Cookies:</strong> Permanente Cookies bleiben auch nach dem Schlie&szlig;en des Endger&auml;ts gespeichert. So k&ouml;nnen beispielsweise der Log-in-Status gespeichert und bevorzugte Inhalte direkt angezeigt werden, wenn der Nutzer eine Website erneut besucht. Ebenso k&ouml;nnen die mithilfe von Cookies erhobenen Nutzerdaten zur Reichweitenmessung Verwendung finden. Sofern wir Nutzern keine expliziten Angaben zur Art und Speicherdauer von Cookies mitteilen (z.&nbsp;B. im Rahmen der Einholung der Einwilligung), sollten sie davon ausgehen, dass diese permanent sind und die Speicherdauer bis zu zwei Jahre betragen kann.</li>
+</ul>
+<p><strong>Allgemeine Hinweise zum Widerruf und Widerspruch (Opt-out):</strong> Nutzer k&ouml;nnen die von ihnen abgegebenen Einwilligungen jederzeit widerrufen und zudem einen Widerspruch gegen die Verarbeitung entsprechend den gesetzlichen Vorgaben, auch mittels der Privatsph&auml;re-Einstellungen ihres Browsers, erkl&auml;ren.</p>
+
+<h2 id="m263">Webanalyse, Monitoring und Optimierung</h2>
+<p>Die Webanalyse (auch als &bdquo;Reichweitenmessung&ldquo; bezeichnet) dient der Auswertung der Besucherstr&ouml;me unseres Onlineangebots und kann Verhalten, Interessen oder demografische Informationen zu den Besuchern, wie beispielsweise Alter oder Geschlecht, als pseudonyme Werte umfassen. Mithilfe der Reichweitenanalyse k&ouml;nnen wir zum Beispiel erkennen, zu welcher Zeit unser Onlineangebot oder dessen Funktionen beziehungsweise Inhalte am h&auml;ufigsten genutzt werden, oder zur Wiederverwendung einladen. Ebenso ist es uns m&ouml;glich, nachzuvollziehen, welche Bereiche der Optimierung bed&uuml;rfen.</p>
+<p>Neben der Webanalyse k&ouml;nnen wir auch Testverfahren einsetzen, um etwa unterschiedliche Versionen unseres Onlineangebots oder seiner Bestandteile zu testen und zu optimieren.</p>
+<p>Sofern nachfolgend nicht anders angegeben, k&ouml;nnen zu diesen Zwecken Profile, also zu einem Nutzungsvorgang zusammengefasste Daten, angelegt und Informationen in einem Browser bzw. in einem Endger&auml;t gespeichert und dann ausgelesen werden. Zu den erhobenen Angaben geh&ouml;ren insbesondere besuchte Websites und dort genutzte Elemente sowie technische Ausk&uuml;nfte, wie etwa der verwendete Browser, das benutzte Computersystem sowie Angaben zu Nutzungszeiten. Sofern sich Nutzer in die Erhebung ihrer Standortdaten uns gegen&uuml;ber oder gegen&uuml;ber den Anbietern der von uns eingesetzten Dienste einverstanden erkl&auml;rt haben, ist auch die Verarbeitung von Standortdaten m&ouml;glich.</p>
+<p>Dar&uuml;ber hinaus werden die IP-Adressen der Nutzer gespeichert. Jedoch nutzen wir ein IP-Masking-Verfahren (d. h. Pseudonymisierung durch K&uuml;rzung der IP-Adresse) zum Schutz der Nutzer. Generell werden die im Rahmen von Webanalyse, A/B-Testings und Optimierung keine Klardaten der Nutzer (wie z.&nbsp;B. E-Mail-Adressen oder Namen) gespeichert, sondern Pseudonyme. Das hei&szlig;t, wir als auch die Anbieter der eingesetzten Software kennen nicht die tats&auml;chliche Identit&auml;t der Nutzer, sondern nur die zum Zweck der jeweiligen Verfahren in deren Profilen gespeicherten Angaben.</p>
+<p>Hinweise zu Rechtsgrundlagen: Sofern wir die Nutzer um deren Einwilligung in den Einsatz der Drittanbieter bitten, stellt die Rechtsgrundlage der Datenverarbeitung die Einwilligung dar. Ansonsten werden die Nutzerdaten auf Grundlage unserer berechtigten Interessen (d. h. Interesse an effizienten, wirtschaftlichen und empf&auml;ngerfreundlichen Leistungen) verarbeitet. In diesem Zusammenhang m&ouml;chten wir Sie auch auf die Informationen zur Verwendung von Cookies in dieser Datenschutzerkl&auml;rung hinweisen.</p>
+<p><strong>Google Analytics:</strong> Wir verwenden Google Analytics zur Messung und Analyse der Nutzung unseres Onlineangebotes auf der Grundlage einer pseudonymen Nutzeridentifikationsnummer. Diese Identifikationsnummer enth&auml;lt keine eindeutigen Daten, wie Namen oder E-Mail-Adressen. Sie dient dazu, Analyseinformationen einem Endger&auml;t zuzuordnen, um zu erkennen, welche Inhalte die Nutzer innerhalb eines oder verschiedener Nutzungsvorg&auml;nge aufgerufen haben, welche Suchbegriffe sie verwendet haben, diese erneut aufgerufen haben oder mit unserem Onlineangebot interagiert haben. Ebenso werden der Zeitpunkt der Nutzung und deren Dauer gespeichert, sowie die Quellen der Nutzer, die auf unser Onlineangebot verweisen und technische Aspekte ihrer Endger&auml;te und Browser. Dabei werden pseudonyme Profile von Nutzern mit Informationen aus der Nutzung verschiedener Ger&auml;te erstellt, wobei Cookies eingesetzt werden k&ouml;nnen. In Google Analytics werden Daten zu unserem Standort auf h&ouml;herer geografischer Ebene bereitgestellt, indem die folgenden Metadaten aus der IP-Erfassung abgefragt werden: "Stadt" (und der abgeleitete Breiten- und L&auml;ngengrad der Stadt), "Kontinent", "Land", "Region", "Subkontinent" (und ID-basierte Gegenst&uuml;cke). Um den Schutz der Nutzerdaten in der EU zu gew&auml;hrleisten, empf&auml;ngt und verarbeitet Google alle Nutzerdaten &uuml;ber Domains und Server innerhalb der EU. Die IP-Adresse der Nutzer wird nicht protokolliert und standardm&auml;&szlig;ig um die letzten beiden Ziffern gek&uuml;rzt. Die K&uuml;rzung der IP-Adresse findet auf EU-Servern f&uuml;r EU-B&uuml;rger statt. Zudem werden alle von der EU ans&auml;ssigen Nutzern erhobenen sensiblen Daten, bevor sie &uuml;ber Domains und Server au&szlig;erhalb der EU erfasst werden, gel&ouml;scht. <strong>Dienstanbieter:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland; <strong>Rechtsgrundlagen:</strong> Einwilligung (Art. 6 Abs. 1 S. 1 lit. a) DSGVO); <strong>Website:</strong> <a href="https://marketingplatform.google.com/intl/de/about/analytics/" target="_blank" rel="noopener">https://marketingplatform.google.com/intl/de/about/analytics/</a>; <strong>Datenschutzerkl&auml;rung:</strong> <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">https://policies.google.com/privacy</a>; <strong>Auftragsverarbeitungsvertrag:</strong> <a href="https://business.safety.google/adsprocessorterms/" target="_blank" rel="noopener">https://business.safety.google/adsprocessorterms/</a>; <strong>Grundlage Drittlandtransfers:</strong> Data Privacy Framework (DPF); <strong>Widerspruchsm&ouml;glichkeit (Opt-out):</strong> Opt-Out-Plugin: <a href="https://tools.google.com/dlpage/gaoptout?hl=de" target="_blank" rel="noopener">https://tools.google.com/dlpage/gaoptout?hl=de</a>, Einstellungen f&uuml;r die Darstellung von Werbeeinblendungen: <a href="https://myadcenter.google.com/personalizationoff" target="_blank" rel="noopener">https://myadcenter.google.com/personalizationoff</a>. Weitere Informationen: <a href="https://business.safety.google/adsservices/" target="_blank" rel="noopener">https://business.safety.google/adsservices/</a> (Arten der Verarbeitung sowie der verarbeiteten Daten).</p>
+
+<h2 id="m136">Pr&auml;senzen in sozialen Netzwerken (Social Media)</h2>
+<p>Wir unterhalten Onlinepr&auml;senzen innerhalb sozialer Netzwerke und verarbeiten in diesem Rahmen Nutzerdaten, um mit den dort aktiven Nutzern zu kommunizieren oder Informationen &uuml;ber uns anzubieten.</p>
+<p>Wir weisen darauf hin, dass dabei Nutzerdaten au&szlig;erhalb des Raumes der Europ&auml;ischen Union verarbeitet werden k&ouml;nnen. Hierdurch k&ouml;nnen sich f&uuml;r die Nutzer Risiken ergeben, weil so zum Beispiel die Durchsetzung der Nutzerrechte erschwert werden k&ouml;nnte.</p>
+<p>Ferner werden die Daten der Nutzer innerhalb sozialer Netzwerke im Regelfall f&uuml;r Marktforschungs- und Werbezwecke verarbeitet. So k&ouml;nnen beispielsweise anhand des Nutzungsverhaltens und sich daraus ergebender Interessen der Nutzer Nutzungsprofile erstellt werden. Letztere finden m&ouml;glicherweise wiederum Verwendung, um etwa Werbeanzeigen innerhalb und au&szlig;erhalb der Netzwerke zu schalten, die mutma&szlig;lich den Interessen der Nutzer entsprechen. Daher werden im Regelfall Cookies auf den Rechnern der Nutzer gespeichert, in denen das Nutzungsverhalten und die Interessen der Nutzer gespeichert werden. Zudem k&ouml;nnen in den Nutzungsprofilen auch Daten unabh&auml;ngig der von den Nutzern verwendeten Ger&auml;ten gespeichert werden (insbesondere, wenn sie Mitglieder der jeweiligen Plattformen und dort eingeloggt sind).</p>
+<p>F&uuml;r eine detaillierte Darstellung der jeweiligen Verarbeitungsformen und der Widerspruchsm&ouml;glichkeiten (Opt-out) verweisen wir auf die Datenschutzerkl&auml;rungen und Angaben der Betreiber der jeweiligen Netzwerke.</p>
+<p>Auch im Fall von Auskunftsanfragen und der Geltendmachung von Betroffenenrechten weisen wir darauf hin, dass diese am effektivsten bei den Anbietern geltend gemacht werden k&ouml;nnen. Nur Letztere haben jeweils Zugriff auf die Nutzerdaten und k&ouml;nnen direkt entsprechende Ma&szlig;nahmen ergreifen und Ausk&uuml;nfte geben. Sollten Sie dennoch Hilfe ben&ouml;tigen, dann k&ouml;nnen Sie sich an uns wenden.</p>
+
+<h2 id="m2324">Datenschutzinformationen f&uuml;r Hinweisgeber</h2>
+<p>In diesem Abschnitt finden Sie Informationen dar&uuml;ber, wie wir Daten von Personen, die Hinweise geben (Hinweisgeber), sowie von betroffenen und beteiligten Parteien im Rahmen unseres Hinweisgeberverfahrens handhaben. Unser Ziel ist es, eine unkomplizierte und sichere Meldem&ouml;glichkeit bereitzustellen.</p>
+<p>Rechtsgrundlagen (Deutschland): Soweit wir Daten zur Erf&uuml;llung unserer gesetzlichen Pflichten entsprechend dem Hinweisgeberschutzgesetz (HinSchG) verarbeiten, ist die rechtliche Basis der Verarbeitung Artikel 6 Abs. 1 S. 1 lit. c) DSGVO und im Fall besonderer Kategorien personenbezogener Daten Art. 9 Abs. 2 lit. g) DSGVO, &sect; 22 BDSG, jeweils in Verbindung mit &sect; 10 HinSchG.</p>
+<p>Verarbeitete Datenarten: Im Rahmen der Entgegennahme und Bearbeitung von Hinweisen sowie im anschlie&szlig;enden Hinweisgeber-Verfahren k&ouml;nnen wir verschiedene Daten erheben. Diese umfassen insbesondere die von einem Hinweisgeber bereitgestellten Daten, wie zum Beispiel: Name, Kontaktdaten und Aufenthaltsort der Person, die den Hinweis gibt, Namen und Daten zu m&ouml;glichen Zeugen oder Personen, die von dem Hinweis betroffen sind, Namen und Daten zu den Personen, gegen die der Hinweis gerichtet ist, Daten &uuml;ber das mutma&szlig;liche Fehlverhalten, sowie weitere relevante Details, sofern vom Hinweisgeber bereitgestellt.</p>
+<p>Besondere Kategorien personenbezogener Daten: Es kann vorkommen, dass wir im Rahmen unserer T&auml;tigkeiten besondere Arten von personenbezogenen Daten erfassen, insbesondere dann, wenn diese von einem Hinweisgeber mitgeteilt werden. Dazu geh&ouml;ren: Gesundheitsbezogene Daten einer Person, Daten zur rassischen oder ethnischen Herkunft.</p>
+<p>Nutzung unserer Onlineformulare: Bitte beachten Sie, dass die M&ouml;glichkeit besteht, Hinweise anonym abzugeben. Um die Sicherheit Ihrer Daten bei der Nutzung unserer Online-Formulare zu gew&auml;hrleisten, empfehlen wir, diese im sogenannten Inkognito-Modus Ihres Browsers aufzurufen.</p>
+<p>Angabe von Namen: Sie haben die M&ouml;glichkeit, Hinweise anonym abzugeben. Insofern es nicht durch nationale Gesetzgebungen untersagt ist, empfehlen wir jedoch die Angabe Ihres Namens und Ihrer Kontaktdaten. Dies erm&ouml;glicht uns, die Meldung effektiver nachzugehen und gegebenenfalls direkt mit Ihnen in Kontakt zu treten.</p>
+<p>Falls Sie Ihren Namen und Kontaktdaten angeben, wird Ihre Identit&auml;t streng vertraulich behandelt.</p>
+<p>Bereitstellung von Daten an Dritte: Daten, die im Zusammenhang mit den abgegebenen Hinweisen stehen, werden von uns nur unter bestimmten Umst&auml;nden an Dritte weitergegeben. Dies geschieht entweder, wenn Sie uns Ihre ausdr&uuml;ckliche Einwilligung dazu erteilt haben, oder wenn eine gesetzliche Verpflichtung zur Weitergabe der Daten besteht. Zu den m&ouml;glichen Dritten geh&ouml;ren &ouml;ffentliche Beh&ouml;rden, Regierungs-, Regulierungs- oder Steuerbeh&ouml;rden, falls die Weitergabe zur Erf&uuml;llung einer gesetzlichen oder regulatorischen Verpflichtung notwendig ist. Au&szlig;erdem k&ouml;nnen wir im Rahmen gesetzlicher Bestimmungen Rechtsanw&auml;lte und andere Fachberater beauftragen. Zudem k&ouml;nnen von uns sorgf&auml;ltig ausgew&auml;hlte und &uuml;berwachte Dienstleister Daten zu diesen Zwecken erhalten (beispielsweise Betreiber eines webbasierten Meldesystems). Diese Dienstleister sind jedoch im Rahmen einer Auftragsdatenverarbeitung vertraglich zur Einhaltung der geltenden Datenschutzbestimmungen verpflichtet.</p>
+<p>Datenaufbewahrung und -l&ouml;schung: Personenbezogene Daten werden nur so lange verarbeitet, wie es zur Erf&uuml;llung der oben beschriebenen Verarbeitungszwecke erforderlich ist. Sind diese Daten f&uuml;r die genannten Zwecke nicht mehr notwendig, erfolgt eine L&ouml;schung.</p>
+<p>Technische und organisatorische Ma&szlig;nahmen: Wir haben die erforderlichen vertraglichen, technischen und organisatorischen Ma&szlig;nahmen implementiert, um die Sicherheit aller von uns verarbeiteten Daten zu gew&auml;hrleisten. Diese Daten werden ausschlie&szlig;lich f&uuml;r die festgelegten Zwecke verarbeitet.</p>
+
+<h2 id="m15">&Auml;nderung und Aktualisierung</h2>
+<p>Wir bitten Sie, sich regelm&auml;&szlig;ig &uuml;ber den Inhalt unserer Datenschutzerkl&auml;rung zu informieren. Wir passen die Datenschutzerkl&auml;rung an, sobald die &Auml;nderungen der von uns durchgef&uuml;hrten Datenverarbeitungen dies erforderlich machen. Wir informieren Sie, sobald durch die &Auml;nderungen eine Mitwirkungshandlung Ihrerseits (z.&nbsp;B. Einwilligung) oder eine sonstige individuelle Benachrichtigung erforderlich wird.</p>
+<p>Sofern wir in dieser Datenschutzerkl&auml;rung Adressen und Kontaktinformationen von Unternehmen und Organisationen angeben, bitten wir zu beachten, dass die Adressen sich &uuml;ber die Zeit &auml;ndern k&ouml;nnen und bitten die Angaben vor Kontaktaufnahme zu pr&uuml;fen.</p>
+
+<h2 id="m42">Begriffsdefinitionen</h2>
+<p>In diesem Abschnitt erhalten Sie eine &Uuml;bersicht &uuml;ber die in dieser Datenschutzerkl&auml;rung verwendeten Begrifflichkeiten. Soweit die Begrifflichkeiten gesetzlich definiert sind, gelten deren gesetzliche Definitionen. Die nachfolgenden Erl&auml;uterungen sollen dagegen vor allem dem Verst&auml;ndnis dienen.</p>
+<ul>
+  <li><strong>Besch&auml;ftigte:</strong> Als Besch&auml;ftigte werden Personen bezeichnet, die in einem Besch&auml;ftigungsverh&auml;ltnis stehen, sei es als Mitarbeiter, Angestellte oder in &auml;hnlichen Positionen. Ein Besch&auml;ftigungsverh&auml;ltnis ist eine rechtliche Beziehung zwischen einem Arbeitgeber und einem Arbeitnehmer, die durch einen Arbeitsvertrag oder eine Vereinbarung festgelegt wird. Es beinhaltet die Verpflichtung des Arbeitgebers, dem Arbeitnehmer eine Verg&uuml;tung zu zahlen, w&auml;hrend der Arbeitnehmer seine Arbeitsleistung erbringt. Das Besch&auml;ftigungsverh&auml;ltnis umfasst verschiedene Phasen, darunter die Begr&uuml;ndung, in der der Arbeitsvertrag geschlossen wird, die Durchf&uuml;hrung, in der der Arbeitnehmer seine Arbeitst&auml;tigkeit aus&uuml;bt, und die Beendigung, wenn das Besch&auml;ftigungsverh&auml;ltnis endet, sei es durch K&uuml;ndigung, Aufhebungsvertrag oder anderweitig. Besch&auml;ftigtendaten sind alle Informationen, die sich auf diese Personen beziehen und im Kontext ihrer Besch&auml;ftigung stehen. Dies umfasst Aspekte wie pers&ouml;nliche Identifikationsdaten, Identifikationsnummern, Gehalts- und Bankdaten, Arbeitszeiten, Urlaubsanspr&uuml;che, Gesundheitsdaten und Leistungsbeurteilungen.</li>
+  <li><strong>Bestandsdaten:</strong> Bestandsdaten umfassen wesentliche Informationen, die f&uuml;r die Identifikation und Verwaltung von Vertragspartnern, Benutzerkonten, Profilen und &auml;hnlichen Zuordnungen notwendig sind. Diese Daten k&ouml;nnen u.a. pers&ouml;nliche und demografische Angaben wie Namen, Kontaktinformationen (Adressen, Telefonnummern, E-Mail-Adressen), Geburtsdaten und spezifische Identifikatoren (Benutzer-IDs) beinhalten. Bestandsdaten bilden die Grundlage f&uuml;r jegliche formelle Interaktion zwischen Personen und Diensten, Einrichtungen oder Systemen, indem sie eine eindeutige Zuordnung und Kommunikation erm&ouml;glichen.</li>
+  <li><strong>Inhaltsdaten:</strong> Inhaltsdaten umfassen Informationen, die im Zuge der Erstellung, Bearbeitung und Ver&ouml;ffentlichung von Inhalten aller Art generiert werden. Diese Kategorie von Daten kann Texte, Bilder, Videos, Audiodateien und andere multimediale Inhalte einschlie&szlig;en, die auf verschiedenen Plattformen und in verschiedenen Formaten ver&ouml;ffentlicht werden. Inhaltsdaten sind nicht auf pers&ouml;nliche Informationen beschr&auml;nkt, sondern k&ouml;nnen jegliche Art von Informationen umfassen, die im Rahmen eines digitalen Austauschs oder einer Interaktion entstehen.</li>
+  <li><strong>Kontaktdaten:</strong> Kontaktdaten sind essentielle Informationen, die die Kommunikation mit Personen oder Organisationen erm&ouml;glichen. Sie umfassen u.a. Telefonnummern, E-Mail-Adressen und Postanschriften sowie Social-Media-Handles und Faxnummern.</li>
+  <li><strong>Meta-, Kommunikations- und Verfahrensdaten:</strong> Meta-, Kommunikations- und Verfahrensdaten sind Kategorien, die Informationen &uuml;ber die Art und Weise, wie Daten verarbeitet, &uuml;bermittelt und verwaltet werden, enthalten. Metadaten, auch bekannt als Daten &uuml;ber Daten, umfassen Informationen, die den Kontext, die Herkunft und die Struktur anderer Daten beschreiben. Sie k&ouml;nnen Angaben zur Dateigr&ouml;&szlig;e, zum Erstellungsdatum, zur Version eines Dokuments sowie zu den Erstellern und Bearbeitern enthalten. Kommunikationsdaten erfassen den Austausch von Informationen zwischen Nutzern &uuml;ber verschiedene Kan&auml;le, wie E-Mail-Verkehr, Anrufprotokolle, Nachrichten in sozialen Netzwerken und Chat-Verl&auml;ufe, inklusive der beteiligten Personen, Zeitstempel und &Uuml;bertragungswege. Verfahrensdaten beschreiben die Prozesse und Abl&auml;ufe innerhalb von Systemen oder Organisationen, einschlie&szlig;lich Workflow-Dokumentationen, und Protokolle von Transaktionen und Aktivit&auml;ten, sowie Audit-Logs, die zur Nachverfolgung und &Uuml;berpr&uuml;fung von Vorg&auml;ngen verwendet werden.</li>
+  <li><strong>Nutzungsdaten:</strong> Nutzungsdaten beziehen sich auf Informationen, die erfassen, wie Nutzer mit digitalen Produkten, Dienstleistungen oder Plattformen interagieren. Diese Daten umfassen eine breite Palette von Informationen, darunter unter anderem, welche Seiten und Funktionen wie oft und wie lange genutzt werden, die Verweildauer auf bestimmten Bereichen, die Navigationspfade, die Anzahl und Art der Interaktionen (wie Klicks, Scrollen, Zoomen), die verwendeten Suchbegriffe, die genutzten Browser und Ger&auml;tetypen, die technischen Daten des Zugriffsger&auml;ts wie Betriebssystem und Bildschirmaufl&ouml;sung, die Spracheinstellungen, der Standort, die sogenannten Referrer-URLs (die zuvor besuchte Seite) und die IP-Adressen, die von den Ger&auml;ten der Nutzer verwendet werden und zur Identifikation der Netzwerkverbindung dienen.</li>
+  <li><strong>Personenbezogene Daten:</strong> "Personenbezogene Daten" sind alle Informationen, die sich auf eine identifizierte oder identifizierbare nat&uuml;rliche Person (im Folgenden "betroffene Person") beziehen; als identifizierbar wird eine nat&uuml;rliche Person angesehen, die direkt oder indirekt, insbesondere mittels Zuordnung zu einer Kennung wie einem Namen, zu einer Kennnummer, zu Standortdaten, zu einer Online-Kennung (z.&nbsp;B. Cookie) oder zu einem oder mehreren besonderen Merkmalen identifiziert werden kann, die Ausdruck der physischen, physiologischen, genetischen, psychischen, wirtschaftlichen, kulturellen oder sozialen Identit&auml;t dieser nat&uuml;rlichen Person sind.</li>
+  <li><strong>Protokolldaten:</strong> Protokolldaten sind Informationen &uuml;ber Ereignisse oder Aktivit&auml;ten, die in einem System oder Netzwerk protokolliert wurden. Diese Daten enthalten typischerweise Informationen wie Zeitstempel, IP-Adressen, Benutzeraktionen, Fehlermeldungen und andere Details &uuml;ber die Nutzung oder den Betrieb eines Systems. Protokolldaten werden h&auml;ufig zur Analyse von Systemproblemen, zur Sicherheits&uuml;berwachung oder zur Erstellung von Performance-Berichten verwendet.</li>
+  <li><strong>Verantwortlicher:</strong> Als "Verantwortlicher" wird die nat&uuml;rliche oder juristische Person, Beh&ouml;rde, Einrichtung oder andere Stelle, die allein oder gemeinsam mit anderen &uuml;ber die Zwecke und Mittel der Verarbeitung von personenbezogenen Daten entscheidet, bezeichnet.</li>
+  <li><strong>Verarbeitung:</strong> "Verarbeitung" ist jeder mit oder ohne Hilfe automatisierter Verfahren ausgef&uuml;hrte Vorgang oder jede solche Vorgangsreihe im Zusammenhang mit personenbezogenen Daten. Der Begriff reicht weit und umfasst praktisch jeden Umgang mit Daten, sei es das Erheben, das Auswerten, das Speichern, das &Uuml;bermitteln oder das L&ouml;schen.</li>
+</ul>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <a href="index.html" class="footer-logo">
+        <span class="footer-logo-dot" aria-hidden="true"></span>
+        <span class="footer-logo-text">JojoClient</span>
+      </a>
+      <span class="footer-copy">&copy; 2026 JojoClient &middot; Not affiliated with Mojang or Microsoft</span>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="impressum.html">Impressum</a>
+        <a href="datenschutz.html">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+
+</body>
+</html>

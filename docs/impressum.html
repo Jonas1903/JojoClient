@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impressum — JojoClient</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ---- Reset ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    img { display: block; max-width: 100%; height: auto; }
+    a { color: inherit; }
+
+    /* ---- Design Tokens ---- */
+    :root {
+      --bg:           #09090B;
+      --surface:      #111113;
+      --elevated:     #18181B;
+      --card:         #1C1C1F;
+      --card-hover:   #232327;
+      --text:         #FAFAFA;
+      --text-sec:     #A1A1AA;
+      --text-muted:   #52525B;
+      --accent:       #22C55E;
+      --accent-hover: #16A34A;
+      --accent-muted: rgba(34, 197, 94, 0.08);
+      --border:       rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.12);
+      --border-accent: rgba(34, 197, 94, 0.28);
+      --shadow-sm:    0 1px 2px rgba(0,0,0,0.5);
+      --shadow-md:    0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+      --shadow-lg:    0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.4);
+      --radius-sm:    4px;
+      --radius-md:    6px;
+      --radius-lg:    8px;
+      --radius-xl:    10px;
+      --font-mono:    'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+      --transition-fast:   0.12s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.2s  cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow:   0.3s  cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ---- Film Grain ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0.022;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 300px 300px;
+    }
+
+    /* ---- Base ---- */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.01em;
+      overflow-x: hidden;
+    }
+
+    /* ---- Nav ---- */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(9, 9, 11, 0.82);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border-bottom: 1px solid var(--border);
+      z-index: 50;
+    }
+
+    .nav-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .nav-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .nav-download {
+      background: var(--accent);
+      color: #052e16;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: background var(--transition-fast);
+      letter-spacing: -0.01em;
+    }
+
+    .nav-download:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ---- Legal Content ---- */
+    .legal-page {
+      padding: 120px 48px 80px;
+    }
+
+    .legal-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .legal-inner h1 {
+      font-size: clamp(2rem, 3vw, 2.9rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 40px;
+    }
+
+    .legal-section {
+      margin-bottom: 36px;
+    }
+
+    .legal-section h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .legal-section p {
+      font-size: 14px;
+      color: var(--text-sec);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .legal-section a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .legal-section a:hover {
+      color: var(--accent-hover);
+    }
+
+    /* ---- Footer ---- */
+    footer {
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .footer-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .footer-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-links a:hover {
+      color: var(--text-sec);
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 1040px) {
+      header { padding: 0; }
+      .nav-inner { padding: 0 24px; }
+      .legal-page { padding: 108px 24px 64px; }
+      .footer-inner {
+        padding: 32px 24px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .legal-page { padding: 100px 20px 48px; }
+      .footer-inner { padding: 28px 20px; }
+      .footer-links { flex-wrap: wrap; justify-content: center; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <header>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <span class="nav-logo-dot" aria-hidden="true"></span>
+        <span class="nav-logo-text">JojoClient</span>
+      </a>
+      <a href="index.html#download" class="nav-download">Download</a>
+    </div>
+  </header>
+
+  <!-- Legal Content -->
+  <main class="legal-page">
+    <div class="legal-inner">
+      <h1>Impressum</h1>
+
+      <div class="legal-section">
+        <h2>Angaben gem&auml;&szlig; &sect; 5 DDG</h2>
+        <p>
+          TFR Consulting UG (haftungsbeschr&auml;nkt)<br>
+          Kl&ouml;pperstieg 8<br>
+          22359 Hamburg<br>
+          Deutschland
+        </p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Vertreten durch</h2>
+        <p>Torsten Frahm, Gesch&auml;ftsf&uuml;hrer</p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Kontakt</h2>
+        <p>
+          E-Mail: <a href="mailto:info@jojoclient.com">info@jojoclient.com</a><br>
+          Telefon: +49 1786808115
+        </p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Registereintrag</h2>
+        <p>
+          Eintragung im Handelsregister<br>
+          Registergericht: Hamburg<br>
+          Registernummer: HRB 180138
+        </p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Umsatzsteuer-ID</h2>
+        <p>
+          Umsatzsteuer-Identifikationsnummer gem&auml;&szlig; &sect; 27a Umsatzsteuergesetz:<br>
+          DE360643632
+        </p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Verantwortlich f&uuml;r den Inhalt nach &sect; 18 Abs. 2 MStV</h2>
+        <p>
+          Torsten Frahm<br>
+          Kl&ouml;pperstieg 8<br>
+          22359 Hamburg
+        </p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Streitschlichtung</h2>
+        <p>
+          Die Europ&auml;ische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:<br>
+          <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr/</a>
+        </p>
+        <p style="margin-top: 8px;">
+          Wir sind weder verpflichtet noch bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+        </p>
+      </div>
+
+      <div class="legal-section">
+        <h2>Nutzungsvorbehalt gem&auml;&szlig; &sect; 44b Abs. 3 UrhG (Text und Data Mining)</h2>
+        <p>
+          Die Inhalte dieser Website d&uuml;rfen nicht f&uuml;r Text- und Data-Mining im Sinne des &sect; 44b Abs. 1 UrhG verwendet werden, insbesondere nicht f&uuml;r das Training k&uuml;nstlicher Intelligenz.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <a href="index.html" class="footer-logo">
+        <span class="footer-logo-dot" aria-hidden="true"></span>
+        <span class="footer-logo-text">JojoClient</span>
+      </a>
+      <span class="footer-copy">&copy; 2026 JojoClient &middot; Not affiliated with Mojang or Microsoft</span>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="impressum.html">Impressum</a>
+        <a href="datenschutz.html">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+
+</body>
+</html>
