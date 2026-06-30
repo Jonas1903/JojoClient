@@ -237,8 +237,12 @@ export async function importProfileBundle(bundleData: string, newName?: string):
   
   // Write files
   const writeFiles = (files: Array<{ path: string; content: string }>, baseDir: string) => {
+    const resolvedBase = path.resolve(baseDir);
     for (const file of files) {
-      const filePath = path.join(baseDir, file.path);
+      const filePath = path.resolve(path.join(baseDir, file.path));
+      if (!filePath.startsWith(resolvedBase + path.sep)) {
+        throw new Error(`Path traversal blocked: "${file.path}" resolves outside the target directory`);
+      }
       const dir = path.dirname(filePath);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(filePath, Buffer.from(file.content, 'base64'));
@@ -482,9 +486,13 @@ export async function importInstallationBundle(
       fs.rmSync(baseDir, { recursive: true, force: true });
     }
     fs.mkdirSync(baseDir, { recursive: true });
-    
+
+    const resolvedBase = path.resolve(baseDir);
     for (const file of files) {
-      const filePath = path.join(baseDir, file.path);
+      const filePath = path.resolve(path.join(baseDir, file.path));
+      if (!filePath.startsWith(resolvedBase + path.sep)) {
+        throw new Error(`Path traversal blocked: "${file.path}" resolves outside the target directory`);
+      }
       const dir = path.dirname(filePath);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(filePath, Buffer.from(file.content, 'base64'));

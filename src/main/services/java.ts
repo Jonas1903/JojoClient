@@ -33,18 +33,21 @@ type AdoptiumAsset = {
   release_name: string;
 };
 
-function getBasePath(): string {
+function getBasePath(): string | null {
   const settings = readSettings();
-  if (!settings.basePath) throw new Error("Base path not set");
-  return settings.basePath;
+  return settings.basePath || null;
 }
 
-function getRuntimeDir(): string {
-  return path.join(getBasePath(), "runtime");
+function getRuntimeDir(): string | null {
+  const basePath = getBasePath();
+  if (!basePath) return null;
+  return path.join(basePath, "runtime");
 }
 
-function getJdkRoot(major: number): string {
-  return path.join(getRuntimeDir(), `jdk-${major}`);
+function getJdkRoot(major: number): string | null {
+  const runtimeDir = getRuntimeDir();
+  if (!runtimeDir) return null;
+  return path.join(runtimeDir, `jdk-${major}`);
 }
 
 /**
@@ -53,7 +56,7 @@ function getJdkRoot(major: number): string {
  */
 export function getBundledJavaPath(major: number): string | null {
   const root = getJdkRoot(major);
-  if (!fs.existsSync(root)) return null;
+  if (!root || !fs.existsSync(root)) return null;
 
   // Adoptium extracts to a folder like jdk-21.0.5+11/bin/java.exe
   // We flatten to runtime/jdk-{major}/bin/java.exe after install.
@@ -212,6 +215,9 @@ async function downloadAdoptiumJdk(
   }
 
   const runtimeDir = getRuntimeDir();
+  if (!runtimeDir) {
+    throw new Error("Base path not configured. Please set up your JojoClient folder first.");
+  }
   fs.mkdirSync(runtimeDir, { recursive: true });
 
   const downloadName = pkg.name || `temurin-${major}.zip`;
@@ -248,6 +254,9 @@ async function downloadAdoptiumJdk(
   });
 
   const targetRoot = getJdkRoot(major);
+  if (!targetRoot) {
+    throw new Error("Base path not configured. Cannot install Java runtime.");
+  }
   // Clean previous attempt to avoid mixing two JDK versions.
   if (fs.existsSync(targetRoot)) {
     fs.rmSync(targetRoot, { recursive: true, force: true });
@@ -283,13 +292,13 @@ async function downloadAdoptiumJdk(
  */
 export async function ensureJava(
   requiredMajor: number,
-  systemFallback: () => string | null,
+  systemFallback: () => Promise<string | null>,
   onProgress: (p: JavaProgress) => void
 ): Promise<string> {
   const bundled = getBundledJavaPath(requiredMajor);
   if (bundled) return bundled;
 
-  const system = systemFallback();
+  const system = await systemFallback();
   if (system) return system;
 
   return downloadAdoptiumJdk(requiredMajor, onProgress);

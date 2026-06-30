@@ -77,8 +77,16 @@ const MC_ENTITLEMENTS_URL = "https://api.minecraftservices.com/entitlements/mcst
 // =============================================================================
 
 function getMachineKey(): Buffer {
-  // Generate a machine-specific key based on OS identifiers
-  const machineId = `${process.platform}-${process.arch}-${os.homedir()}`;
+  // Use the stable userData path (survives OS account changes) plus a fallback to homedir
+  // in case electron.app is not available (e.g., during testing or early startup).
+  let stablePath: string;
+  try {
+    const { app } = require("electron");
+    stablePath = app.getPath("userData");
+  } catch {
+    stablePath = os.homedir();
+  }
+  const machineId = `${process.platform}-${process.arch}-${stablePath}`;
   return crypto.createHash("sha256").update(machineId).digest();
 }
 
@@ -710,16 +718,31 @@ export async function getAccount(): Promise<MinecraftAccount | null> {
     };
   } catch (error) {
     console.error("❌ Failed to get/refresh account:", error);
-    
-    // Clear invalid tokens
-    const store = loadStore();
-    if (store.activeUuid && store.accounts[store.activeUuid]) {
-      delete store.accounts[store.activeUuid];
-      const remainingUuids = Object.keys(store.accounts);
-      store.activeUuid = remainingUuids.length > 0 ? remainingUuids[0] : null;
-      saveStore(store);
+
+    // Only clear tokens on unrecoverable errors (invalid grant, revoked consent).
+    // Network errors, timeouts, and server errors are transient — keep tokens
+    // so the user stays logged in when connectivity recovers.
+    const msg = error instanceof Error ? error.message : String(error);
+    const isPermanent =
+      msg.includes("401") ||
+      msg.includes("invalid_grant") ||
+      msg.includes("AADSTS") ||
+      msg.includes("consent_required") ||
+      msg.includes("interaction_required");
+
+    if (isPermanent) {
+      console.warn("🔒 Unrecoverable auth error — clearing tokens:", msg);
+      const store = loadStore();
+      if (store.activeUuid && store.accounts[store.activeUuid]) {
+        delete store.accounts[store.activeUuid];
+        const remainingUuids = Object.keys(store.accounts);
+        store.activeUuid = remainingUuids.length > 0 ? remainingUuids[0] : null;
+        saveStore(store);
+      }
+    } else {
+      console.warn("🌐 Transient auth error — keeping tokens for retry:", msg);
     }
-    
+
     return null;
   }
 }

@@ -1,15 +1,23 @@
 {
   "name": "jojoclient",
   "private": true,
-  "version": "1.2.6",
+  "version": "1.0.0",
   "scripts": {
     "dev:renderer": "vite --port 5173 --strictPort",
     "dev:electron": "tsc -p tsconfig.electron.json --watch",
     "dev:app": "set VITE_DEV_SERVER_URL=http://localhost:5173 && electron .",
     "dev": "concurrently -k \"npm run dev:electron\" \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:app\"",
     "build": "vite build && tsc -p tsconfig.electron.json && electron-builder",
+    "publish": "vite build && tsc -p tsconfig.electron.json && electron-builder --publish always",
+    "publish:force": "gh release delete v1.0.0 --yes --repo Jonas1903/JojoClient 2>/dev/null; git push origin :refs/tags/v1.0.0 2>/dev/null; git tag -d v1.0.0 2>/dev/null; vite build && tsc -p tsconfig.electron.json && electron-builder --publish always",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/launcher.test.ts tests/profileExport.test.ts",
+    "test:integration": "vitest run tests/integration/",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +28,9 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^20.11.30",
     "@types/react": "^18.2.64",
@@ -33,6 +44,9 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.61.1",
+    "sharp": "^0.35.2",
     "typescript": "^5.2.2",
     "vite": "^5.1.6",
     "vite-plugin-electron": "^0.28.6",

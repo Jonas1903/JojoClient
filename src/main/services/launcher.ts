@@ -1,10 +1,13 @@
-import { spawn, ChildProcess, execSync } from "child_process";
+import { spawn, ChildProcess, execFile } from "child_process";
 import path from "path";
 import fs from "fs";
+import { promisify } from "util";
 import { readSettings } from "../utils/storage";
 import { getAccount } from "./auth";
 import { DownloadResult } from "./download";
 import { ensureJava, getBundledJavaPath, JavaProgress } from "./java";
+
+const execFileAsync = promisify(execFile);
 
 // =============================================================================
 // Types
@@ -46,9 +49,11 @@ function parseJavaMajor(versionOutput: string): number | null {
   return Number.isNaN(major) ? null : major;
 }
 
-function readJavaMajor(javaPath: string): number | null {
+async function readJavaMajor(javaPath: string): Promise<number | null> {
   try {
-    const output = execSync(`"${javaPath}" -version 2>&1`, { encoding: "utf-8" });
+    const { stderr, stdout } = await execFileAsync(javaPath, ["-version"]);
+    // Java outputs version info to stderr
+    const output = stderr || stdout;
     return parseJavaMajor(output);
   } catch {
     return null;
@@ -74,24 +79,23 @@ function getRequiredJavaMajor(mcVersion?: string): number {
 }
 
 function isSupportedJava(major: number, required: number): boolean {
-  // Java must meet minimum requirement
-  // Allow newer Java versions (21, 22, 23, etc.) for forward compatibility
-  if (required >= 21) return major >= 21;
-  // For Java 17 requirement, allow 17-21 (not newer due to potential compatibility issues with old MC)
-  return major >= required && major <= 21;
+  // Java must meet minimum requirement.
+  // For Java 21 requirement, allow 21+ (forward compatible).
+  // For Java 17 requirement, allow 17+ (newer Java runtimes handle older bytecode fine).
+  return major >= required;
 }
 
 /**
  * Searches for a compatible Java binary on the system. Returns null if none
  * is found (does not throw). The auto-download fallback lives in resolveJavaPath().
  */
-function findExistingJava(mcVersion?: string): string | null {
+async function findExistingJava(mcVersion?: string): Promise<string | null> {
   const requiredMajor = getRequiredJavaMajor(mcVersion);
 
   // 1. JojoClient-managed runtime (auto-downloaded previously).
   const bundled = getBundledJavaPath(requiredMajor);
   if (bundled) {
-    const major = readJavaMajor(bundled);
+    const major = await readJavaMajor(bundled);
     if (major !== null && isSupportedJava(major, requiredMajor)) {
       console.log(`✅ Using bundled Java ${major} at: ${bundled}`);
       return bundled;
@@ -123,7 +127,7 @@ function findExistingJava(mcVersion?: string): string | null {
   // First check explicit paths
   for (const javaPath of possiblePaths) {
     if (fs.existsSync(javaPath)) {
-      const major = readJavaMajor(javaPath);
+      const major = await readJavaMajor(javaPath);
       if (major !== null && isSupportedJava(major, requiredMajor)) {
         console.log(`✅ Found Java ${major} at: ${javaPath}`);
         return javaPath;
@@ -149,7 +153,7 @@ function findExistingJava(mcVersion?: string): string | null {
           if (entry.match(/jdk-(1[7-9]|2[0-9])/)) {
             const javaExe = path.join(dir, entry, "bin", "java.exe");
             if (fs.existsSync(javaExe)) {
-              const major = readJavaMajor(javaExe);
+              const major = await readJavaMajor(javaExe);
               if (major !== null && isSupportedJava(major, requiredMajor)) {
                 console.log(`✅ Found Java ${major} at: ${javaExe}`);
                 return javaExe;
@@ -165,7 +169,8 @@ function findExistingJava(mcVersion?: string): string | null {
 
   // Try to check if java in PATH is version 17+ (and compatible with this MC version)
   try {
-    const versionOutput = execSync("java -version 2>&1", { encoding: "utf-8" });
+    const { stderr, stdout } = await execFileAsync("java", ["-version"]);
+    const versionOutput = stderr || stdout;
     const majorVersion = parseJavaMajor(versionOutput);
     if (majorVersion !== null) {
       if (isSupportedJava(majorVersion, requiredMajor)) {
@@ -192,7 +197,7 @@ export async function resolveJavaPath(
   const requiredMajor = getRequiredJavaMajor(mcVersion);
   return ensureJava(
     requiredMajor,
-    () => findExistingJava(mcVersion),
+    async () => findExistingJava(mcVersion),
     (p) => onJavaProgress?.(p)
   );
 }
@@ -411,6 +416,8 @@ export async function launchGame(
     detached: false,
   });
 
+  // Always track the process — the pid may not be immediately available on
+  // some platforms, but we still want killGame() to find it on exit.
   if (gameProcess.pid) {
     gameProcesses.set(gameProcess.pid, gameProcess);
   }

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "deepseek/deepseek-v4-pro",
+  "default_agent": "orchestrator",
+  "instructions": ["CLAUDE.md"],
+  "permission": {
+    "bash": "allow",
+    "background_process": "allow",
+    "edit": "allow",
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "task": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "semantic_search": "allow",
+    "lsp": "allow",
+    "skill": "allow",
+    "external_directory": "allow",
+    "todowrite": "allow",
+    "todoread": "allow",
+    "question": "allow"
+  },
+  "command": {
+    "reason": {
+      "template": "$ARGUMENTS",
+      "description": "Deep-reason about a problem using the reasoner agent",
+      "agent": "reasoner"
+    },
+    "architect": {
+      "template": "$ARGUMENTS",
+      "description": "Plan architecture for a new feature (Electron main, React renderer, or service layer)",
+      "agent": "architect"
+    },
+    "fastfix": {
+      "template": "$ARGUMENTS",
+      "description": "Apply a quick, single-change fix",
+      "agent": "fast"
+    },
+    "goal": {
+      "template": "$ARGUMENTS",
+      "description": "GOAL MODE: Build the complete JojoClient feature autonomously — no questions, no stopping",
+      "agent": "goal"
+    }
+  }
+}

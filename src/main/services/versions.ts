@@ -113,7 +113,11 @@ const FABRIC_META_URL = "https://meta.fabricmc.net/v2";
 // =============================================================================
 
 let cachedVersionManifest: VersionManifest | null = null;
+let cachedVersionManifestAt = 0;
 let cachedFabricLoaders: FabricLoaderVersion[] | null = null;
+let cachedFabricLoadersAt = 0;
+
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 // =============================================================================
 // Minecraft Version APIs
@@ -123,7 +127,7 @@ let cachedFabricLoaders: FabricLoaderVersion[] | null = null;
  * Fetch the Minecraft version manifest
  */
 export async function getMinecraftVersionManifest(): Promise<VersionManifest> {
-  if (cachedVersionManifest) return cachedVersionManifest;
+  if (cachedVersionManifest && Date.now() - cachedVersionManifestAt < CACHE_TTL_MS) return cachedVersionManifest;
 
   console.log("📦 Fetching Minecraft version manifest...");
   const response = await fetch(MC_VERSION_MANIFEST_URL);
@@ -133,6 +137,7 @@ export async function getMinecraftVersionManifest(): Promise<VersionManifest> {
   }
 
   cachedVersionManifest = await response.json();
+  cachedVersionManifestAt = Date.now();
   console.log(`✅ Found ${cachedVersionManifest!.versions.length} Minecraft versions`);
   return cachedVersionManifest!;
 }
@@ -174,7 +179,7 @@ export async function getMinecraftVersionDetails(version: string): Promise<Versi
  * Fetch available Fabric loader versions
  */
 export async function getFabricLoaderVersions(): Promise<FabricLoaderVersion[]> {
-  if (cachedFabricLoaders) return cachedFabricLoaders;
+  if (cachedFabricLoaders && Date.now() - cachedFabricLoadersAt < CACHE_TTL_MS) return cachedFabricLoaders;
 
   console.log("🧵 Fetching Fabric loader versions...");
   const response = await fetch(`${FABRIC_META_URL}/versions/loader`);
@@ -188,7 +193,8 @@ export async function getFabricLoaderVersions(): Promise<FabricLoaderVersion[]> 
     version: l.version,
     stable: l.stable,
   }));
-  
+  cachedFabricLoadersAt = Date.now();
+
   console.log(`✅ Found ${cachedFabricLoaders!.length} Fabric loader versions`);
   return cachedFabricLoaders!;
 }

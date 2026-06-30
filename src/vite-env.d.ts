@@ -81,7 +81,7 @@ declare global {
 
       // Settings
       getSettings: () => Promise<{ basePath: string | null }>
-      pickBaseFolder: () => Promise<string | null>
+      pickBaseFolder: () => Promise<{ ok: boolean; path?: string; canceled?: boolean }>
       setBaseFolder: (basePath: string) => Promise<{ ok: boolean; error?: string }>
       
       // Auth

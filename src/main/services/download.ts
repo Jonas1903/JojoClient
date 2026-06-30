@@ -189,34 +189,37 @@ async function downloadFile(task: DownloadTask, contextLabel: string): Promise<v
 
 type ArgumentEntry = string | { value: string | string[]; rules?: ArgumentRule[] };
 
-function shouldUseArgument(rules?: ArgumentRule[], features?: Record<string, boolean>): boolean {
-  if (!rules || rules.length === 0) return true;
-
-  const platformName = process.platform === "win32"
+function getPlatformName(): "windows" | "osx" | "linux" {
+  return process.platform === "win32"
     ? "windows"
     : process.platform === "darwin"
       ? "osx"
       : "linux";
+}
 
+function ruleMatchesOs(rule: ArgumentRule, platformName: string): boolean {
+  if (rule.os?.name && rule.os.name !== platformName) return false;
+
+  if (rule.os?.arch) {
+    if (rule.os.arch === "x86" && process.arch !== "ia32") return false;
+    if (rule.os.arch === "x86_64" && process.arch !== "x64") return false;
+    if (rule.os.arch === "arm64" && process.arch !== "arm64") return false;
+  }
+
+  return true;
+}
+
+function shouldUseArgument(rules?: ArgumentRule[], features?: Record<string, boolean>): boolean {
+  if (!rules || rules.length === 0) return true;
+
+  const platformName = getPlatformName();
   let allowed = false;
+
   for (const rule of rules) {
+    if (!ruleMatchesOs(rule, platformName)) continue;
+
     let matches = true;
-
-    if (rule.os?.name && rule.os.name !== platformName) {
-      matches = false;
-    }
-
-    if (rule.os?.arch) {
-      if (rule.os.arch === "x86" && process.arch !== "ia32") {
-        matches = false;
-      } else if (rule.os.arch === "x86_64" && process.arch !== "x64") {
-        matches = false;
-      } else if (rule.os.arch === "arm64" && process.arch !== "arm64") {
-        matches = false;
-      }
-    }
-
-    if (matches && rule.features) {
+    if (rule.features) {
       for (const [feature, value] of Object.entries(rule.features)) {
         if ((features?.[feature] ?? false) !== value) {
           matches = false;
@@ -290,33 +293,13 @@ function extractVersionArguments(details: VersionDetails): { jvm: string[]; game
 function shouldUseLibrary(library: Library): boolean {
   if (!library.rules) return true;
 
-  const platformName = process.platform === "win32"
-    ? "windows"
-    : process.platform === "darwin"
-      ? "osx"
-      : "linux";
-
+  const platformName = getPlatformName();
   let allowed = false;
+
   for (const rule of library.rules) {
-    let matches = true;
+    if (!ruleMatchesOs(rule, platformName)) continue;
 
-    if (rule.os?.name && rule.os.name !== platformName) {
-      matches = false;
-    }
-
-    if (rule.os?.arch) {
-      if (rule.os.arch === "x86" && process.arch !== "ia32") {
-        matches = false;
-      } else if (rule.os.arch === "x86_64" && process.arch !== "x64") {
-        matches = false;
-      } else if (rule.os.arch === "arm64" && process.arch !== "arm64") {
-        matches = false;
-      }
-    }
-
-    if (matches) {
-      allowed = rule.action === "allow";
-    }
+    allowed = rule.action === "allow";
   }
 
   return allowed;
@@ -653,6 +636,7 @@ async function downloadAssets(
   }
 
   // Download missing assets
+  const failures: Array<{ hash: string; url: string }> = [];
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i];
     onProgress(i + 1, tasks.length, task.sha1!.substring(0, 8));
@@ -661,8 +645,16 @@ async function downloadAssets(
       await downloadFile(task, task.label || task.sha1!.substring(0, 8));
     } catch (error) {
       console.error(`Failed to download asset: ${task.url}`, error);
+      failures.push({ hash: task.sha1!, url: task.url });
       // Continue with other assets, some might be optional
     }
+  }
+
+  if (failures.length > 0) {
+    console.warn(
+      `⚠️ ${failures.length} asset download(s) failed. Missing assets: ${failures.map(f => f.hash.substring(0, 8)).join(", ")}. ` +
+      `The game may have missing textures or sounds.`
+    );
   }
 }
 
@@ -762,10 +754,19 @@ export async function downloadGame(
   console.log(`✅ Download complete!`);
 
   const baseArgs = extractVersionArguments(mcDetails);
-  const fabricArgs = {
-    jvm: flattenArguments(fabricDetails.arguments?.jvm),
-    game: flattenArguments(fabricDetails.arguments?.game),
-  };
+  const fabricArgs = fabricDetails.arguments
+    ? {
+        jvm: flattenArguments(fabricDetails.arguments.jvm),
+        game: flattenArguments(fabricDetails.arguments.game),
+      }
+    : { jvm: [] as string[], game: [] as string[] };
+
+  if (!fabricDetails.arguments) {
+    console.warn(
+      `⚠️ Fabric profile for ${mcVersion} / ${fabricLoaderVersion} is missing the arguments block. ` +
+      `Launch args will only contain base Minecraft arguments — Fabric loader flags may be absent.`
+    );
+  }
 
   return {
     clientJar,

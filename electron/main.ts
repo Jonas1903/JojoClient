@@ -264,7 +264,9 @@ function createWindow() {
     win.loadFile(indexPath);
   }
 
-  const saveWindowBounds = () => {
+  let boundsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const saveWindowBoundsImmediate = () => {
     if (!win) return;
     const current = readSettings();
     const isMaximized = win.isMaximized();
@@ -281,7 +283,27 @@ function createWindow() {
     });
   };
 
-  win.on("close", saveWindowBounds);
+  const saveWindowBounds = () => {
+    if (!win) return;
+    // Debounce: close fires alongside resize/move on some platforms.
+    // Serializing writes prevents concurrent writeFileSync corruption.
+    if (boundsSaveTimer) clearTimeout(boundsSaveTimer);
+    boundsSaveTimer = setTimeout(() => {
+      if (!win) return;
+      saveWindowBoundsImmediate();
+      boundsSaveTimer = null;
+    }, 100);
+  };
+
+  win.on("close", () => {
+    // Flush immediately on close — skip the debounce so bounds are persisted
+    // before the window is destroyed.
+    if (boundsSaveTimer) {
+      clearTimeout(boundsSaveTimer);
+      boundsSaveTimer = null;
+    }
+    saveWindowBoundsImmediate();
+  });
   win.on("resize", saveWindowBounds);
   win.on("move", saveWindowBounds);
 
@@ -312,10 +334,30 @@ function createWindow() {
 }
 
 app.on("window-all-closed", () => {
+  // Kill all tracked game processes before quitting
+  for (const [id, procs] of gameProcesses.entries()) {
+    for (const proc of procs) {
+      try { proc.kill(); } catch { /* process may already be dead */ }
+    }
+    gameProcesses.delete(id);
+  }
+  killGame();
+
   if (process.platform !== "darwin") {
     app.quit();
     win = null;
   }
+});
+
+app.on("before-quit", () => {
+  // Ensure all game processes are terminated when the app is closing
+  for (const [id, procs] of gameProcesses.entries()) {
+    for (const proc of procs) {
+      try { proc.kill(); } catch { /* process may already be dead */ }
+    }
+    gameProcesses.delete(id);
+  }
+  killGame();
 });
 
 app.on("activate", () => {
@@ -348,22 +390,35 @@ app.whenReady().then(() => {
 
     autoUpdater.on("update-available", (info) => {
       console.log("📦 Update available:", info.version);
+      win?.webContents.send("app:update-available", {
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseName: info.releaseName,
+      });
     });
 
     autoUpdater.on("update-not-available", () => {
       console.log("✅ App is up to date");
+      win?.webContents.send("app:update-not-available");
     });
 
     autoUpdater.on("download-progress", (progress) => {
       console.log(`⬇️ Downloading update: ${Math.floor(progress.percent)}%`);
+      win?.webContents.send("app:update-download-progress", {
+        percent: progress.percent,
+        transferred: progress.transferred,
+        total: progress.total,
+      });
     });
 
     autoUpdater.on("update-downloaded", () => {
       console.log("✅ Update downloaded — will install silently on next app close");
+      win?.webContents.send("app:update-downloaded");
     });
 
     autoUpdater.on("error", (error) => {
       console.error("❌ Update error:", error);
+      win?.webContents.send("app:update-error", error.message);
     });
 
     // Check for updates on startup (after 3 seconds)
@@ -407,8 +462,8 @@ app.whenReady().then(() => {
       properties: ["openDirectory", "createDirectory"],
     });
 
-    if (result.canceled || result.filePaths.length === 0) return null;
-    return result.filePaths[0];
+    if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true };
+    return { ok: true, path: result.filePaths[0] };
   });
 
   ipcMain.handle("baseFolder:set", async (_event, basePath: string) => {
@@ -521,7 +576,9 @@ app.whenReady().then(() => {
         DEFAULT_FABRIC_LOADER_VERSION,
         (progress: DownloadProgress) => {
           // Send progress to renderer
-          event.sender.send("game:downloadProgress", progress);
+          if (!event.sender.isDestroyed()) {
+            event.sender.send("game:downloadProgress", progress);
+          }
         }
       );
       cachedDownloadResult = result;
@@ -535,7 +592,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("game:launch", async (event, data: { mcVersion: string; fabricVersion: string; installationId: string }) => {
     try {
-      const mcVersion = data?.mcVersion || DEFAULT_MC_VERSION;
+      if (!data || typeof data.installationId !== "string") {
+        return { ok: false, error: "Missing or invalid installation ID" };
+      }
+      const mcVersion = data.mcVersion || DEFAULT_MC_VERSION;
 
       const installation = await profiles.getInstallationById(data.installationId);
       if (!installation) {
@@ -1080,30 +1140,36 @@ app.whenReady().then(() => {
       const result = await profiles.createInstallation(data.profileId, data.name, data.minecraftVersion, data.description);
 
       // Sync mods in the background so creation returns immediately.
+      // Uses the per-installation sync lock so a rapid "create then launch"
+      // doesn't race two file-sync operations against each other.
       void (async () => {
         try {
           const installation = result.installation;
           const profile = await profiles.getProfileById(installation.profileId);
           if (!profile) return;
 
-          const syncResult = await mods.syncProfileModsToInstallation(
-            profile.id,
-            installation.id,
-            (progress) => {
-              _event.sender.send("mods:downloadProgress", {
-                installationId: installation.id,
-                ...progress,
-              });
-            }
-          );
+          await runWithInstallationSyncLock(installation.id, async () => {
+            const syncResult = await mods.syncProfileModsToInstallation(
+              profile.id,
+              installation.id,
+              (progress) => {
+                if (!_event.sender.isDestroyed()) {
+                  _event.sender.send("mods:downloadProgress", {
+                    installationId: installation.id,
+                    ...progress,
+                  });
+                }
+              }
+            );
 
-          if (!syncResult.skipped) {
-            if (syncResult.issues.length > 0) {
-              await profiles.updateInstallation(installation.id, { modIssues: syncResult.issues } as any);
-            } else {
-              await profiles.updateInstallation(installation.id, { modIssues: [] } as any);
+            if (!syncResult.skipped) {
+              if (syncResult.issues.length > 0) {
+                await profiles.updateInstallation(installation.id, { modIssues: syncResult.issues } as any);
+              } else {
+                await profiles.updateInstallation(installation.id, { modIssues: [] } as any);
+              }
             }
-          }
+          });
         } catch (err) {
           console.error("Background mod sync failed after installation create:", err);
         }

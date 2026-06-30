@@ -9,9 +9,17 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-electron
 dist-ssr
 release/
 *.local
+
+# Environment variables (contains secrets — NEVER commit)
+.env
+.env.*
+
+# Debug artifacts
+debug_*
 
 # Editor directories and files
 .vscode/*

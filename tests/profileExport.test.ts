@@ -3,6 +3,12 @@ import { buildProfileExport, deserializeProfile, migrateProfileExport, resolvePr
 import { PROFILE_EXPORT_FORMAT } from "../src/main/services/profileExportSchema";
 import type { ProfilesIndex } from "../src/main/types";
 
+vi.mock("electron", () => ({
+  app: {
+    getPath: vi.fn().mockReturnValue("C:\\test\\appdata"),
+  },
+}));
+
 vi.mock("crypto", async () => {
   const actual = await vi.importActual<typeof import("crypto")>("crypto");
   return {
