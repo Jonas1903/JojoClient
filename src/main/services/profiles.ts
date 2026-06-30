@@ -158,8 +158,13 @@ export async function loadProfilesIndex(): Promise<ProfilesIndex> {
   
   if (fs.existsSync(indexPath)) {
     const data = fs.readFileSync(indexPath, 'utf-8');
-    const parsed = JSON.parse(data) as ProfilesIndex;
-    return parsed;
+    try {
+      const parsed = JSON.parse(data) as ProfilesIndex;
+      return parsed;
+    } catch (parseError) {
+      console.warn(`Corrupted profiles index at ${indexPath}, recreating:`, parseError);
+      // Fall through to create a fresh index
+    }
   }
   
   const index: ProfilesIndex = {
@@ -190,16 +195,28 @@ export async function saveProfilesIndex(index: ProfilesIndex): Promise<void> {
  */
 export async function loadInstallationsIndex(profileName: string): Promise<InstallationsIndex> {
   const indexPath = getInstallationsIndexPath(profileName);
-  const profile = await getProfileByName(profileName);
-  
+
+  // profileName may be sanitized (from callers like getAllInstallations).
+  // Match against the profiles index using sanitized-name comparison so
+  // profiles with special characters in their display name resolve correctly.
+  const profilesIndex = await loadProfilesIndex();
+  const profile = Object.values(profilesIndex.profiles).find(
+    (p) => sanitizeName(p.name) === profileName
+  );
+
   if (!profile) {
     throw new Error(`Profile "${profileName}" not found`);
   }
   
   if (fs.existsSync(indexPath)) {
     const data = fs.readFileSync(indexPath, 'utf-8');
-    const parsed = JSON.parse(data) as InstallationsIndex;
-    return parsed;
+    try {
+      const parsed = JSON.parse(data) as InstallationsIndex;
+      return parsed;
+    } catch (parseError) {
+      console.warn(`Corrupted installations index at ${indexPath}, recreating:`, parseError);
+      // Fall through to create a fresh index
+    }
   }
   
   // Create empty index
@@ -265,17 +282,29 @@ export async function createProfile(
 ): Promise<Profile> {
   const index = await loadProfilesIndex();
   
-  // Check for duplicate name
+  // Check for duplicate name (case-insensitive)
   const existingNames = Object.values(index.profiles)
     .filter((p) => !p.isDefault)
     .map(p => p.name.toLowerCase());
   if (existingNames.includes(name.toLowerCase())) {
     throw new Error(`A profile with name "${name}" already exists`);
   }
-  
+
+  // Check for sanitized-name collision: two names that differ only in
+  // characters removed by sanitizeName() would share the same directory.
   const sanitized = sanitizeName(name);
   if (!sanitized) {
     throw new Error('Invalid profile name');
+  }
+  const sanitizedLower = sanitized.toLowerCase();
+  const existingSanitized = Object.values(index.profiles)
+    .filter((p) => !p.isDefault)
+    .map(p => sanitizeName(p.name).toLowerCase());
+  if (existingSanitized.includes(sanitizedLower)) {
+    throw new Error(
+      `A profile with a conflicting folder name already exists. ` +
+      `"${name}" and an existing profile would share the same directory.`
+    );
   }
   
   const now = new Date().toISOString();
@@ -336,12 +365,37 @@ export async function updateProfile(
     if (existingNames.includes(updates.name.toLowerCase())) {
       throw new Error(`A profile with name "${updates.name}" already exists`);
     }
-    
-    // Rename folder
+
+    // Rename folder: save the updated index FIRST so that if the rename
+    // fails, on-disk state is still consistent (index points to old name
+    // which still exists on disk).
     const oldDir = getProfileDir(sanitizeName(profile.name));
     const newDir = getProfileDir(sanitizeName(updates.name));
-    if (fs.existsSync(oldDir) && oldDir !== newDir) {
-      fs.renameSync(oldDir, newDir);
+    if (oldDir !== newDir) {
+      if (!fs.existsSync(oldDir)) {
+        throw new Error(`Cannot rename profile: folder "${oldDir}" no longer exists. It may have been moved or deleted externally.`);
+      }
+
+      // Persist the name change before moving the directory.
+      const updatedProfile: Profile = {
+        ...profile,
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      index.profiles[id] = updatedProfile;
+      await saveProfilesIndex(index);
+
+      try {
+        fs.renameSync(oldDir, newDir);
+      } catch (renameErr) {
+        // Revert the index change so we don't leave a dangling reference.
+        index.profiles[id] = profile;
+        await saveProfilesIndex(index);
+        const msg = renameErr instanceof Error ? renameErr.message : String(renameErr);
+        throw new Error(`Failed to rename profile directory: ${msg}`);
+      }
+
+      return updatedProfile;
     }
   }
   
@@ -390,14 +444,29 @@ export async function deleteProfile(id: string): Promise<{ movedInstallations: s
   }
   
   const movedInstallations: string[] = [];
+  const moveErrors: Array<{ installationId: string; error: string }> = [];
 
   const installationsIndex = await loadInstallationsIndex(sanitizeName(profile.name));
   for (const installation of Object.values(installationsIndex.installations)) {
-    await moveInstallation(installation.id, targetProfile.id);
-    movedInstallations.push(installation.id);
+    try {
+      await moveInstallation(installation.id, targetProfile.id);
+      movedInstallations.push(installation.id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      moveErrors.push({ installationId: installation.id, error: msg });
+    }
   }
 
-  // Delete profile folder (should be empty after moves)
+  if (moveErrors.length > 0) {
+    // Don't delete the profile directory if any moves failed — data would be lost.
+    throw new Error(
+      `Could not move ${moveErrors.length} of ${Object.keys(installationsIndex.installations).length} installations. ` +
+      `Failed: ${moveErrors.map(e => e.installationId).join(", ")}. ` +
+      `No data was deleted. Close any running games and try again.`
+    );
+  }
+
+  // Delete profile folder (all installations have been moved)
   const profileDir = getProfileDir(sanitizeName(profile.name));
   if (fs.existsSync(profileDir)) {
     fs.rmSync(profileDir, { recursive: true, force: true });
@@ -418,10 +487,12 @@ export async function deleteProfile(id: string): Promise<{ movedInstallations: s
  * Get all installations across all profiles
  */
 export async function getAllInstallations(): Promise<Array<Installation & { profileName: string }>> {
-  const profiles = await getAllProfiles();
+  const profilesIndex = await loadProfilesIndex();
+  const profiles = Object.values(profilesIndex.profiles);
   const allInstallations: Array<Installation & { profileName: string }> = [];
-  
+
   for (const profile of profiles) {
+    // Pass the sanitized name — loadInstallationsIndex matches by sanitized comparison.
     const installationsIndex = await loadInstallationsIndex(sanitizeName(profile.name));
     for (const installation of Object.values(installationsIndex.installations)) {
       allInstallations.push({
@@ -430,7 +501,7 @@ export async function getAllInstallations(): Promise<Array<Installation & { prof
       });
     }
   }
-  
+
   return allInstallations;
 }
 
@@ -906,13 +977,26 @@ export async function updateTemplateFromInstallation(installationId: string): Pr
   for (const folder of foldersToSync) {
     const srcFolder = path.join(installationDir, folder);
     const destFolder = path.join(templateDir, folder);
-    
+
     if (fs.existsSync(srcFolder)) {
-      // Clear destination and copy fresh
+      // Copy to a temp directory first, then atomically rename into place
+      const tempDest = destFolder + ".tmp-" + Date.now();
+      if (fs.existsSync(tempDest)) {
+        fs.rmSync(tempDest, { recursive: true, force: true });
+      }
+      await copyTemplateToInstallation(srcFolder, tempDest);
+
+      // Atomic swap: remove old, rename temp into place
       if (fs.existsSync(destFolder)) {
         fs.rmSync(destFolder, { recursive: true, force: true });
       }
-      await copyTemplateToInstallation(srcFolder, destFolder);
+      try {
+        fs.renameSync(tempDest, destFolder);
+      } catch {
+        // If rename fails (cross-device), fall back to copy
+        await copyTemplateToInstallation(tempDest, destFolder);
+        fs.rmSync(tempDest, { recursive: true, force: true });
+      }
     }
   }
   

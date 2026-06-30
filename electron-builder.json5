@@ -7,8 +7,8 @@
   "appId": "com.jojoclient.app",
   "asar": true,
   "productName": "JojoClient",
-  // App icon: place a 512x512 icon.png in public/ (generated from icon.svg).
-  // electron-builder auto-converts it to .ico for Windows and .icns for macOS.
+  // App icon: 512x512 PNG generated from icon.svg at build time.
+  // Run: npx sharp-cli -i public/icon.svg -o public/icon.png resize 512 512
   "icon": "public/icon.png",
   "publish": {
     "provider": "github",

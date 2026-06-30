@@ -12,6 +12,7 @@ import {
   sanitizeName,
 } from "./profiles";
 import { isGameRunning } from "./launcher";
+import { DEFAULT_MC_VERSION } from "./versions";
 import type { ModIssue } from "../types";
 
 // ============================================
@@ -255,15 +256,39 @@ type ModrinthProject = {
   icon_url: string | null;
 };
 
+// BLOCKLIST: specific versions known to cause issues (e.g. labeled 1.21 but require newer Fabric API/dependencies)
+const BLOCKLIST_VERSION_NUMBERS = [
+  "mc1.21-0.6.0-beta.1-fabric", // Sodium beta that breaks Sodium Extra on 1.21
+  "mc1.21-0.6.0-beta.2-fabric",
+];
+
+// Simple LRU cache to prevent unbounded memory growth
+class LRUCache<V> {
+  private map = new Map<string, V>();
+  private maxSize: number;
+  constructor(maxSize: number) { this.maxSize = maxSize; }
+  get(key: string): V | undefined { return this.map.get(key); }
+  set(key: string, value: V): void {
+    if (this.map.has(key)) { this.map.delete(key); }
+    else if (this.map.size >= this.maxSize) {
+      // Evict oldest (first) entry
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) this.map.delete(oldest);
+    }
+    this.map.set(key, value);
+  }
+  has(key: string): boolean { return this.map.has(key); }
+}
+
 // Cache for project ID to slug mapping
-const projectIdToSlugCache = new Map<string, string>();
+const projectIdToSlugCache = new LRUCache<string>(500);
 
 // Cache for version ID → full version metadata (used during dep-compatibility checks)
-const modVersionByIdCache = new Map<string, ModrinthVersion>();
+const modVersionByIdCache = new LRUCache<ModrinthVersion>(200);
 
 // Cache for (slug:mcVersion) → the best selected version, so repeated calls during
 // resolveAllSlugsWithDependencies and downloadMod don't hit the network twice.
-const modVersionCache = new Map<string, ModrinthVersion>();
+const modVersionCache = new LRUCache<ModrinthVersion>(200);
 
 async function fetchProjectSlug(projectId: string): Promise<string | null> {
   if (projectIdToSlugCache.has(projectId)) {
@@ -308,12 +333,6 @@ async function fetchModrinthVersion(
     (a, b) => new Date(b.date_published).getTime() - new Date(a.date_published).getTime()
   );
 
-  // BLOCKLIST: specific versions known to cause issues (e.g. labeled 1.21 but require newer Fabric API/dependencies)
-  const BLOCKLIST_VERSION_NUMBERS = [
-    "mc1.21-0.6.0-beta.1-fabric", // Sodium beta that breaks Sodium Extra on 1.21
-    "mc1.21-0.6.0-beta.2-fabric",
-  ];
-  
   const filtered = sorted.filter(v => {
     // Check version_number blocklist
     if (BLOCKLIST_VERSION_NUMBERS.includes(v.version_number)) {
@@ -632,13 +651,8 @@ export async function downloadMod(
     if (forcedVersionId) {
        const directVersion = await fetchModrinthVersionById(forcedVersionId);
        // BLOCKLIST check for forced versions too (dependencies often pin bad versions)
-       const BLOCKLIST_VERSIONS = [
-        "mc1.21-0.6.0-beta.1-fabric",
-        "mc1.21-0.6.0-beta.2-fabric",
-       ];
-       
        const directFile = directVersion.files.find((f) => f.primary) || directVersion.files[0];
-       const isBlockedByVersion = BLOCKLIST_VERSIONS.includes(directVersion.version_number);
+       const isBlockedByVersion = BLOCKLIST_VERSION_NUMBERS.includes(directVersion.version_number);
        const isBlockedByFilename = directFile && BLOCKED_FILENAMES.some((b) => directFile.filename.toLowerCase().includes(b.toLowerCase()));
 
        if (isBlockedByVersion || isBlockedByFilename) { 
@@ -857,9 +871,18 @@ function isRelatedConfigFile(relativePath: string, modsList: ProfileModEntry[]):
   });
 }
 
-type PendingSync = {
-  installations: string[];
+type PendingSyncEntry = {
+  installationId: string;
+  retries: number;
+  lastAttemptAt: number;
 };
+
+type PendingSync = {
+  installations: PendingSyncEntry[];
+};
+
+const MAX_SYNC_RETRIES = 3;
+const BASE_BACKOFF_MS = 60_000; // 1 minute base
 
 function getPendingSyncPath(profileName: string): string {
   return path.join(getProfileDir(profileName), "pending-sync.json");
@@ -870,7 +893,14 @@ function loadPendingSync(profileName: string): PendingSync {
   if (!fs.existsSync(syncPath)) return { installations: [] };
   try {
     const data = JSON.parse(fs.readFileSync(syncPath, "utf-8"));
-    return Array.isArray(data?.installations) ? { installations: data.installations } : { installations: [] };
+    if (Array.isArray(data?.installations)) {
+      // Support migration from old format (string array)
+      const entries = data.installations.map((entry: string | PendingSyncEntry) =>
+        typeof entry === "string" ? { installationId: entry, retries: 0, lastAttemptAt: 0 } : entry
+      );
+      return { installations: entries };
+    }
+    return { installations: [] };
   } catch {
     return { installations: [] };
   }
@@ -887,28 +917,52 @@ async function queueProfileSync(profileId: string): Promise<void> {
   if (!profile) throw new Error("Profile not found");
   const installations = await getInstallationsByProfile(profile.name);
   const pending = loadPendingSync(profile.name);
-  const merged = new Set<string>(pending.installations);
+  const existingIds = new Set(pending.installations.map(e => e.installationId));
   for (const installation of installations) {
-    merged.add(installation.id);
+    if (!existingIds.has(installation.id)) {
+      pending.installations.push({ installationId: installation.id, retries: 0, lastAttemptAt: 0 });
+    }
   }
-  savePendingSync(profile.name, { installations: Array.from(merged) });
+  savePendingSync(profile.name, pending);
 }
 
 export async function processPendingSyncs(): Promise<void> {
   if (isGameRunning()) return;
   const profiles = await getAllProfiles();
+  const now = Date.now();
   for (const profile of profiles) {
     const pending = loadPendingSync(profile.name);
     if (!pending.installations.length) continue;
-    const remaining: string[] = [];
-    for (const installationId of pending.installations) {
+    const remaining: PendingSyncEntry[] = [];
+    let gaveUp = false;
+    for (const entry of pending.installations) {
+      // Skip entries that have exhausted retries
+      if (entry.retries >= MAX_SYNC_RETRIES) {
+        gaveUp = true;
+        console.warn(`Gave up syncing installation ${entry.installationId} after ${MAX_SYNC_RETRIES} failed attempts.`);
+        continue;
+      }
+      // Apply exponential backoff: only retry after base * 2^retries ms
+      const backoff = BASE_BACKOFF_MS * Math.pow(2, entry.retries);
+      if (now - entry.lastAttemptAt < backoff) {
+        remaining.push(entry);
+        continue;
+      }
       try {
-        await syncProfileModsToInstallation(profile.id, installationId);
+        await syncProfileModsToInstallation(profile.id, entry.installationId);
+        // Success — don't push to remaining
       } catch {
-        remaining.push(installationId);
+        remaining.push({
+          installationId: entry.installationId,
+          retries: entry.retries + 1,
+          lastAttemptAt: now,
+        });
       }
     }
     savePendingSync(profile.name, { installations: remaining });
+    if (gaveUp) {
+      console.log(`Some sync retries exhausted for profile "${profile.name}". Clear pending-sync.json to retry.`);
+    }
   }
 }
 
@@ -974,14 +1028,16 @@ export async function addModToProfile(
   const addedDependencies: string[] = [];
 
   if (!existing) {
-    modsList.push({ slug, title, iconUrl: iconUrl ?? null, enabled: true });
     changed = true;
 
-    // Fetch the mod's required dependencies and add them to the profile
+    // Resolve dependencies FIRST before adding anything to the mod list.
+    // If dep resolution fails, the mod itself still gets added (without deps)
+    // so the user sees what happened and can retry.
+    const newMods: ProfileModEntry[] = [{ slug, title, iconUrl: iconUrl ?? null, enabled: true }];
+
     try {
-      // We need an MC version to fetch dependencies - get it from an installation or use latest
       const installations = await getInstallationsByProfile(profile.name);
-      const mcVersion = installations[0]?.minecraftVersion || "1.21.4";
+      const mcVersion = installations[0]?.minecraftVersion || DEFAULT_MC_VERSION;
 
       const version = await fetchModrinthVersion(slug, mcVersion);
       const requiredDeps = (version.dependencies || []).filter(
@@ -995,14 +1051,15 @@ export async function addModToProfile(
         if (!depSlug) continue;
 
         // Check if dependency is already in the profile
-        const depExists = modsList.find((m) => m.slug === depSlug);
+        const depExists = modsList.find((m) => m.slug === depSlug) ||
+                          newMods.find((m) => m.slug === depSlug);
         if (!depExists) {
           // Fetch dependency info for title and icon
           try {
             const depProject = await fetch(`https://api.modrinth.com/v2/project/${depSlug}`);
             if (depProject.ok) {
               const depInfo = (await depProject.json()) as ModrinthProject;
-              modsList.push({
+              newMods.push({
                 slug: depSlug,
                 title: depInfo.title,
                 iconUrl: depInfo.icon_url,
@@ -1012,13 +1069,18 @@ export async function addModToProfile(
             }
           } catch {
             // Still add with minimal info if fetch fails
-            modsList.push({ slug: depSlug, enabled: true });
+            newMods.push({ slug: depSlug, enabled: true });
             addedDependencies.push(depSlug);
           }
         }
       }
     } catch (e) {
       console.warn("Failed to fetch mod dependencies:", e instanceof Error ? e.message : String(e));
+    }
+
+    // Add all new mods (the target mod + resolved deps) atomically to the list
+    for (const entry of newMods) {
+      modsList.push(entry);
     }
   } else if (existing.enabled === false) {
     existing.enabled = true;
@@ -1218,10 +1280,19 @@ function recoverFromLatestConfigParseCrash(
   if (!modId) return [];
 
   const modDetails = findInstalledModDetailsById(modsDir, modId);
+  // Detect config-parse crashes from multiple JSON/TOML parsers.
+  // Gson uses JsonSyntaxException/Expected BEGIN_*; kotlinx.serialization
+  // and NightConfig use different messages; most parsers include "Exception"
+  // when a config file fails to parse.
   const isJsonConfigCrash =
     content.includes("JsonSyntaxException") ||
     content.includes("Expected BEGIN_OBJECT") ||
-    content.includes("Expected BEGIN_ARRAY");
+    content.includes("Expected BEGIN_ARRAY") ||
+    content.includes("JsonParseException") ||
+    content.includes("TomlParseException") ||
+    content.includes("ConfigParseException") ||
+    (content.includes("Config") && content.includes("Exception") &&
+     (content.includes(".json") || content.includes(".toml") || content.includes(".json5")));
 
   const deletedConfigs = deleteRelatedConfigFilesForMod(
     configDir,
@@ -2107,7 +2178,7 @@ export async function deleteMod(
         }
         
         // Update the sync state file to reflect the removed mod
-        const syncStatePath = path.join(installModsDir, ".sync-state.json");
+        const syncStatePath = getSyncStatePath(installModsDir);
         if (fs.existsSync(syncStatePath)) {
           try {
             const stateData = JSON.parse(fs.readFileSync(syncStatePath, "utf-8"));

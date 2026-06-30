@@ -35,6 +35,9 @@ export default function App() {
   // Per-installation ref lock: prevents button-spam sending multiple IPC calls for the
   // same installation before the first one returns. Different installations are independent.
   const launchingInstallationIdsRef = useRef<Set<string>>(new Set());
+  // Sync ref for game running state — updated immediately on exit events so
+  // handlePlay can read it without waiting for the React state to commit.
+  const gameRunningRef = useRef(false);
 
   // Profiles & Installations
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -69,6 +72,14 @@ export default function App() {
 
   // Global busy overlay
   const [busyOverlay, setBusyOverlay] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+
+  // Auto-updater state
+  const [updateStatus, setUpdateStatus] = useState<{
+    state: "idle" | "available" | "downloading" | "ready";
+    version?: string;
+    percent?: number;
+    error?: string;
+  }>({ state: "idle" });
 
   const showConfirm = (title: string, message: string, onConfirm: () => void) => {
     setConfirmModal({
@@ -150,6 +161,7 @@ export default function App() {
   const refreshGameStatus = useCallback(async () => {
     try {
       const gameStatus = await window.jojoclient.getGameStatus();
+      gameRunningRef.current = gameStatus.isRunning;
       setGameState(gameStatus.isRunning ? "running" : "idle");
     } catch (e) {
       console.error("Failed to refresh game status:", e);
@@ -200,6 +212,7 @@ export default function App() {
     });
 
     const unsubExit = window.jojoclient?.onGameExit?.(() => {
+      gameRunningRef.current = false;
       setLaunchAnotherBusy(false);
       refreshGameStatus();
     });
@@ -214,14 +227,40 @@ export default function App() {
       setModDownloadProgress(payload);
     });
 
+    const unsubUpdateAvailable = window.jojoclient?.onUpdateAvailable?.((info) => {
+      setUpdateStatus({ state: "available", version: info.version });
+    });
+
+    const unsubUpdateNotAvailable = window.jojoclient?.onUpdateNotAvailable?.(() => {
+      setUpdateStatus({ state: "idle" });
+    });
+
+    const unsubUpdateDownloadProgress = window.jojoclient?.onUpdateDownloadProgress?.((progress) => {
+      setUpdateStatus({ state: "downloading", percent: progress.percent });
+    });
+
+    const unsubUpdateDownloaded = window.jojoclient?.onUpdateDownloaded?.(() => {
+      setUpdateStatus({ state: "ready" });
+    });
+
+    const unsubUpdateError = window.jojoclient?.onUpdateError?.((msg) => {
+      setError(`Update error: ${msg}`);
+      setUpdateStatus({ state: "idle" });
+    });
+
     return () => {
       unsubProgress?.();
       unsubLog?.();
       unsubExit?.();
       unsubModsProgress?.();
+      unsubUpdateAvailable?.();
+      unsubUpdateNotAvailable?.();
+      unsubUpdateDownloadProgress?.();
+      unsubUpdateDownloaded?.();
+      unsubUpdateError?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadProfiles, loadInstallations, refreshGameStatus, selectedInstallation]);
+  }, [loadProfiles, loadInstallations, refreshGameStatus]);
 
   // Apply theme to document
   useEffect(() => {
@@ -269,10 +308,10 @@ export default function App() {
   async function chooseFolder() {
     try {
       setError(null);
-      const picked = await window.jojoclient.pickBaseFolder();
-      if (!picked) return;
+      const result = await window.jojoclient.pickBaseFolder();
+      if (!result.ok || !result.path) return;
 
-      const res = await window.jojoclient.setBaseFolder(picked);
+      const res = await window.jojoclient.setBaseFolder(result.path);
       if (!res.ok) throw new Error(res.error ?? "Failed to set base folder");
 
       const s = await window.jojoclient.getSettings();
@@ -344,16 +383,18 @@ export default function App() {
   async function handlePlay() {
     if (!selectedInstallation || !account) return;
     if (launchingInstallationIdsRef.current.has(selectedInstallation.id)) return;
-    if (gameState === "running" && launchAnotherBusy) return;
+    if (gameRunningRef.current && launchAnotherBusy) return;
 
     launchingInstallationIdsRef.current.add(selectedInstallation.id);
     try {
       setError(null);
-      if (gameState === "idle") {
+      if (!gameRunningRef.current) {
+        gameRunningRef.current = true;
         setGameState("downloading");
         setGameLogs([]);
         setDownloadProgress(null);
-      } else if (gameState === "running") {
+      } else {
+        // Game is already running — launch another instance with cooldown.
         setLaunchAnotherBusy(true);
         if (launchAnotherTimerRef.current) {
           window.clearTimeout(launchAnotherTimerRef.current);
@@ -362,9 +403,6 @@ export default function App() {
           setLaunchAnotherBusy(false);
           launchAnotherTimerRef.current = null;
         }, 5000);
-      } else {
-        // gameState is "downloading" — already in launch pipeline, do nothing.
-        return;
       }
 
       const result = await window.jojoclient.launchGame({
@@ -476,7 +514,7 @@ export default function App() {
       if (!result.ok || !result.gameDir) {
         throw new Error(result.error ?? "Failed to get installation folder");
       }
-      await window.jojoclient.openFolder(`${result.gameDir}\\mods`);
+      await window.jojoclient.openFolder(`${result.gameDir}/mods`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
@@ -490,7 +528,7 @@ export default function App() {
       if (!result.ok || !result.gameDir) {
         throw new Error(result.error ?? "Failed to get installation folder");
       }
-      await window.jojoclient.openFolder(`${result.gameDir}\\logs`);
+      await window.jojoclient.openFolder(`${result.gameDir}/logs`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
@@ -575,8 +613,8 @@ export default function App() {
           </svg>
           <h1>JojoClient</h1>
           <p>Choose where JojoClient should store your Minecraft installations, profiles, and mods.</p>
-          {error && <div className="error-message">{error}</div>}
-          <button className="btn btn-primary" onClick={chooseFolder}>
+          {error && <div className="error-message" data-testid="setup-error">{error}</div>}
+          <button className="btn btn-primary" onClick={chooseFolder} data-testid="choose-folder-btn">
             Choose Folder
           </button>
         </div>
@@ -612,6 +650,7 @@ export default function App() {
             <button
               className={`navbar-tab ${activeTab === "play" ? "active" : ""}`}
               onClick={() => setActiveTab("play")}
+              data-testid="nav-play"
             >
               <span className="tab-icon"><IconPlay /></span>
               Play
@@ -619,6 +658,7 @@ export default function App() {
             <button
               className={`navbar-tab ${activeTab === "mods" ? "active" : ""}`}
               onClick={() => setActiveTab("mods")}
+              data-testid="nav-mods"
             >
               <span className="tab-icon"><IconPackage /></span>
               Mods
@@ -627,6 +667,7 @@ export default function App() {
               <button
                 className={`navbar-tab ${activeTab === "partner" ? "active" : ""}`}
                 onClick={() => setActiveTab("partner")}
+                data-testid="nav-partner"
               >
                 <span className="tab-icon"><IconHandshake /></span>
                 Partner
@@ -639,6 +680,7 @@ export default function App() {
               className={`navbar-account-btn ${!account ? 'no-account' : ''}`}
               onClick={() => setShowAccountModal(true)}
               title="Account"
+              data-testid="account-button"
             >
               {account ? (
                 <img
@@ -654,6 +696,7 @@ export default function App() {
               className={`navbar-icon-btn profiles-btn ${activeTab === "profiles" ? "active" : ""}`}
               onClick={() => setActiveTab("profiles")}
               title="Profiles"
+              data-testid="nav-profiles"
             >
               <IconUser />
             </button>
@@ -661,6 +704,7 @@ export default function App() {
               className={`navbar-icon-btn ${activeTab === "settings" ? "active" : ""}`}
               onClick={() => setActiveTab("settings")}
               title="Settings"
+              data-testid="nav-settings"
             >
               <IconSettings />
             </button>
@@ -672,6 +716,7 @@ export default function App() {
             className="window-control-btn minimize"
             onClick={() => window.jojoclient.windowMinimize()}
             title="Minimize"
+            data-testid="window-minimize"
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
               <rect x="1" y="5.5" width="10" height="1" fill="currentColor" />
@@ -681,6 +726,7 @@ export default function App() {
             className="window-control-btn maximize"
             onClick={() => window.jojoclient.windowMaximize()}
             title="Maximize"
+            data-testid="window-maximize"
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
               <rect x="1.5" y="1.5" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1" />
@@ -690,6 +736,7 @@ export default function App() {
             className="window-control-btn close"
             onClick={() => window.jojoclient.windowClose()}
             title="Close"
+            data-testid="window-close"
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
               <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.5" />
@@ -699,11 +746,54 @@ export default function App() {
         </div>
       </header>
 
+      {/* Update Banner */}
+      {updateStatus.state !== "idle" && (
+        <div className={`update-banner update-${updateStatus.state === "available" ? "available" : updateStatus.state === "downloading" ? "downloading" : "ready"}`} data-testid="update-banner">
+          <span>
+            {updateStatus.state === "available" && `Update available${updateStatus.version ? ` (v${updateStatus.version})` : ""}`}
+            {updateStatus.state === "downloading" && `Downloading update${updateStatus.percent != null ? ` (${Math.floor(updateStatus.percent)}%)` : "..."}`}
+            {updateStatus.state === "ready" && "Update ready — restart to install"}
+          </span>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {updateStatus.state === "available" && (
+              <>
+                <button
+                  className="update-action-btn"
+                  onClick={async () => {
+                    const result = await window.jojoclient.downloadUpdate();
+                    if (!result.ok) {
+                      setUpdateStatus({ state: "available", version: updateStatus.version, error: result.error });
+                      return;
+                    }
+                    // Let the download-progress events transition to "downloading" state
+                  }}
+                >
+                  Download
+                </button>
+                <button className="update-dismiss-btn" onClick={() => setUpdateStatus({ state: "idle" })}>
+                  Dismiss
+                </button>
+              </>
+            )}
+            {updateStatus.state === "ready" && (
+              <>
+                <button className="update-action-btn" onClick={() => window.jojoclient.installUpdate()}>
+                  Restart now
+                </button>
+                <button className="update-dismiss-btn" onClick={() => setUpdateStatus({ state: "idle" })}>
+                  Later
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Error Banner */}
       {error && (
-        <div className="error-banner">
+        <div className="error-banner" data-testid="error-banner">
           <span>{error}</span>
-          <button onClick={() => setError(null)}>×</button>
+          <button onClick={() => setError(null)} data-testid="error-dismiss">×</button>
         </div>
       )}
 
@@ -822,15 +912,15 @@ export default function App() {
 
       {/* Confirmation Modal */}
       {confirmModal.show && (
-        <div className="modal-overlay" onClick={hideConfirm}>
+        <div className="modal-overlay" onClick={hideConfirm} data-testid="confirm-overlay">
           <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
             <h3>{confirmModal.title}</h3>
             <p className="confirm-message">{confirmModal.message}</p>
             <div className="confirm-actions">
-              <button className="btn btn-cancel" onClick={hideConfirm}>
+              <button className="btn btn-cancel" onClick={hideConfirm} data-testid="confirm-cancel">
                 Cancel
               </button>
-              <button className="btn btn-danger" onClick={confirmModal.onConfirm}>
+              <button className="btn btn-danger" onClick={confirmModal.onConfirm} data-testid="confirm-delete">
                 Delete
               </button>
             </div>
@@ -839,12 +929,12 @@ export default function App() {
       )}
 
       {infoModal.show && (
-        <div className="modal-overlay" onClick={hideInfo}>
+        <div className="modal-overlay" onClick={hideInfo} data-testid="info-overlay">
           <div className="modal info-modal" onClick={(e) => e.stopPropagation()}>
             <h3>{infoModal.title}</h3>
             <p className="info-message">{infoModal.message}</p>
             <div className="confirm-actions">
-              <button className="btn btn-cancel" onClick={hideInfo}>
+              <button className="btn btn-cancel" onClick={hideInfo} data-testid="info-ok">
                 OK
               </button>
             </div>
@@ -887,7 +977,7 @@ export default function App() {
 
       {/* Busy Overlay */}
       {busyOverlay.show && (
-        <div className="busy-overlay">
+        <div className="busy-overlay" data-testid="busy-overlay">
           <div className="busy-content">
             <div className="spinner" />
             <span className="busy-message">{busyOverlay.message}</span>
