@@ -109,6 +109,25 @@ const MC_VERSION_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_
 const FABRIC_META_URL = "https://meta.fabricmc.net/v2";
 
 // =============================================================================
+// Fetch helper with timeout — prevents indefinite hangs when APIs are unreachable
+// (e.g. Fabric Maven being down during createInstallation → busy spinner at
+// 100 % CPU due to software-rendered CSS animation → apparent PC freeze).
+// =============================================================================
+
+const FETCH_TIMEOUT_MS = 15_000; // 15 s — generous enough for cold cache, tight enough to not feel frozen.
+
+async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// =============================================================================
 // Cache
 // =============================================================================
 
@@ -130,7 +149,7 @@ export async function getMinecraftVersionManifest(): Promise<VersionManifest> {
   if (cachedVersionManifest && Date.now() - cachedVersionManifestAt < CACHE_TTL_MS) return cachedVersionManifest;
 
   console.log("📦 Fetching Minecraft version manifest...");
-  const response = await fetch(MC_VERSION_MANIFEST_URL);
+  const response = await fetchWithTimeout(MC_VERSION_MANIFEST_URL);
   
   if (!response.ok) {
     throw new Error(`Failed to fetch version manifest: ${response.status}`);
@@ -162,7 +181,7 @@ export async function getMinecraftVersionDetails(version: string): Promise<Versi
   }
 
   console.log(`📦 Fetching details for Minecraft ${version}...`);
-  const response = await fetch(versionInfo.url);
+  const response = await fetchWithTimeout(versionInfo.url);
   
   if (!response.ok) {
     throw new Error(`Failed to fetch version details: ${response.status}`);
@@ -182,7 +201,7 @@ export async function getFabricLoaderVersions(): Promise<FabricLoaderVersion[]> 
   if (cachedFabricLoaders && Date.now() - cachedFabricLoadersAt < CACHE_TTL_MS) return cachedFabricLoaders;
 
   console.log("🧵 Fetching Fabric loader versions...");
-  const response = await fetch(`${FABRIC_META_URL}/versions/loader`);
+  const response = await fetchWithTimeout(`${FABRIC_META_URL}/versions/loader`);
   
   if (!response.ok) {
     throw new Error(`Failed to fetch Fabric loaders: ${response.status}`);
@@ -207,8 +226,8 @@ export async function getFabricVersionDetails(
   loaderVersion: string
 ): Promise<FabricVersionDetails> {
   console.log(`🧵 Fetching Fabric profile for MC ${mcVersion} + Loader ${loaderVersion}...`);
-  
-  const response = await fetch(
+
+  const response = await fetchWithTimeout(
     `${FABRIC_META_URL}/versions/loader/${mcVersion}/${loaderVersion}/profile/json`
   );
   
@@ -223,7 +242,7 @@ export async function getFabricVersionDetails(
  * Check if Fabric supports a specific Minecraft version
  */
 export async function isFabricSupported(mcVersion: string): Promise<boolean> {
-  const response = await fetch(`${FABRIC_META_URL}/versions/loader/${mcVersion}`);
+  const response = await fetchWithTimeout(`${FABRIC_META_URL}/versions/loader/${mcVersion}`);
   if (!response.ok) return false;
   
   const loaders = await response.json();
@@ -234,22 +253,31 @@ export async function isFabricSupported(mcVersion: string): Promise<boolean> {
  * Get the latest stable Fabric loader version
  */
 export async function getLatestFabricLoaderVersion(): Promise<string> {
-  const loaders = await getFabricLoaderVersions();
-  const stable = loaders.find(l => l.stable);
-  return stable?.version || loaders[0]?.version || DEFAULT_FABRIC_LOADER_VERSION;
+  try {
+    const loaders = await getFabricLoaderVersions();
+    const stable = loaders.find(l => l.stable);
+    return stable?.version || loaders[0]?.version || DEFAULT_FABRIC_LOADER_VERSION;
+  } catch {
+    return DEFAULT_FABRIC_LOADER_VERSION;
+  }
 }
 
 /**
  * Get the latest stable Fabric loader version for a specific MC version
  */
 export async function getLatestFabricLoaderForMcVersion(mcVersion: string): Promise<string | null> {
-  const response = await fetch(`${FABRIC_META_URL}/versions/loader/${mcVersion}`);
-  if (!response.ok) return null;
-  
-  const loaders = await response.json();
-  if (!Array.isArray(loaders) || loaders.length === 0) return null;
-  
-  // Find stable loader
-  const stable = loaders.find((l: { loader: { stable: boolean; version: string } }) => l.loader.stable);
-  return stable?.loader.version || loaders[0]?.loader.version || null;
+  try {
+    const response = await fetchWithTimeout(`${FABRIC_META_URL}/versions/loader/${mcVersion}`);
+    if (!response.ok) return null;
+
+    const loaders = await response.json();
+    if (!Array.isArray(loaders) || loaders.length === 0) return null;
+
+    // Find stable loader
+    const stable = loaders.find((l: { loader: { stable: boolean; version: string } }) => l.loader.stable);
+    return stable?.loader.version || loaders[0]?.loader.version || null;
+  } catch {
+    // Network timeout or DNS failure — return null so callers fall back to the default.
+    return null;
+  }
 }

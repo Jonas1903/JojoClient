@@ -40,9 +40,19 @@ import {
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-// Prevent GPU-related black screen issues on some Windows setups.
-app.disableHardwareAcceleration();
-app.commandLine.appendSwitch("disable-gpu");
+// GPU-related black screen issues on some Windows setups can be worked around
+// by disabling hardware acceleration, but force-disabling it unconditionally
+// pushes ALL rendering (including CSS animations like the busy spinner) through
+// the CPU. When a network operation hangs (e.g. Fabric API unreachable during
+// createInstallation), the software-rendered spinner loop pegs the CPU and the
+// whole system feels frozen.
+//
+// We disable it only when the user explicitly opts in via an env flag.
+// Re-enable this block if black-screen reports return and add a UI toggle.
+if (process.env.JOJOCLIENT_DISABLE_GPU === "1") {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("disable-gpu");
+}
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
