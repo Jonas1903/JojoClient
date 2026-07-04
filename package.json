@@ -1,7 +1,7 @@
 {
   "name": "jojoclient",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "dev:renderer": "vite --port 5173 --strictPort",
     "dev:electron": "tsc -p tsconfig.electron.json --watch",

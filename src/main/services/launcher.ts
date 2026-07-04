@@ -66,8 +66,9 @@ function getRequiredJavaMajor(mcVersion?: string): number {
   const major = parseInt(parts[0] || "0", 10);
   const minor = parseInt(parts[1] || "0", 10);
 
-  // Minecraft 2.x+ (future proofing)
-  if (major > 1) return 21;
+  // Minecraft 26.x+ (new versioning scheme) — MC 26 requires Java 25.
+  // Rule: Java major = MC major - 1 (26 → 25, 27 → 26, etc.)
+  if (major > 1) return major - 1;
   // Minecraft 1.21+ requires Java 21
   if (major === 1 && minor >= 21) return 21;
   // Minecraft 1.18 - 1.20.x requires Java 17
