@@ -224,6 +224,9 @@ function filterJvmArgs(args: string[]): string[] {
   const blockedPrefixes = [
     "-Djava.library.path=",
     "-Dorg.lwjgl.librarypath=",
+    // JDK 23+ removed sun.misc.Unsafe memory access; this flag errors on those runtimes.
+    // Mojang ships it in MC 26.x JVM args for Java 21 compat — safe to strip on newer JDKs.
+    "--sun-misc-unsafe-memory-access=",
   ];
   const blockedExact = new Set(["-XstartOnFirstThread"]);
   const filtered: string[] = [];
