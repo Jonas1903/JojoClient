@@ -3,7 +3,7 @@
 // =============================================================================
 
 // Hardcoded versions for initial implementation
-export const DEFAULT_MC_VERSION = "1.21.4";
+export const DEFAULT_MC_VERSION = "26.2";
 export const DEFAULT_FABRIC_LOADER_VERSION = "0.18.4";
 
 // =============================================================================
