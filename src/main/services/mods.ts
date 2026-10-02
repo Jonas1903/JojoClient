@@ -278,6 +278,7 @@ class LRUCache<V> {
     this.map.set(key, value);
   }
   has(key: string): boolean { return this.map.has(key); }
+  clear(): void { this.map.clear(); }
 }
 
 // Cache for project ID to slug mapping
@@ -1887,6 +1888,41 @@ function validateModDependencies(
   }
 
   return issues;
+}
+
+/**
+ * Re-resolves the latest compatible Modrinth version of every mod in a profile
+ * and re-downloads them into each of the profile's installations.
+ * Drops the in-memory version caches and each installation's sync-state file so
+ * the regular sync cannot short-circuit on a cache hit.
+ */
+export async function updateProfileModsToLatest(
+  profileId: string,
+  onProgress?: (installationId: string, progress: ModSyncProgress) => void
+): Promise<Array<{ installationId: string; failed: string[]; issues: ModIssue[] }>> {
+  if (isGameRunning()) {
+    throw new Error("Cannot update mods while the game is running. Close the game first.");
+  }
+  const profile = await getProfileById(profileId);
+  if (!profile) throw new Error("Profile not found");
+
+  modVersionCache.clear();
+  modVersionByIdCache.clear();
+
+  const installations = await getInstallationsByProfile(profile.name);
+  const results: Array<{ installationId: string; failed: string[]; issues: ModIssue[] }> = [];
+  for (const installation of installations) {
+    const modsDir = path.join(
+      getInstallationDir(sanitizeName(profile.name), sanitizeName(installation.name)),
+      "mods"
+    );
+    fs.rmSync(getSyncStatePath(modsDir), { force: true });
+    const syncResult = await syncProfileModsToInstallation(profileId, installation.id, (progress) =>
+      onProgress?.(installation.id, progress)
+    );
+    results.push({ installationId: installation.id, failed: syncResult.failed, issues: syncResult.issues });
+  }
+  return results;
 }
 
 export async function syncProfileModsToInstallation(

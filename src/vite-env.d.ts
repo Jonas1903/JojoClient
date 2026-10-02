@@ -174,6 +174,8 @@ declare global {
         Promise<{ ok: boolean; bundle?: string; canceled?: boolean; error?: string }>
       syncProfileModsToInstallations: (profileId: string) =>
         Promise<{ ok: boolean; syncedCount?: number; results?: Array<{ installationId: string; failed: string[]; issues?: Array<{ slug: string; modName: string; error: string; details?: string; timestamp: number }> }>; error?: string }>
+      updateProfileMods: (profileId: string) =>
+        Promise<{ ok: boolean; updatedCount?: number; results?: Array<{ installationId: string; failed: string[]; issues?: Array<{ slug: string; modName: string; error: string; details?: string; timestamp: number }> }>; error?: string }>
       syncInstallationMods: (installationId: string) =>
         Promise<{ ok: boolean; failed?: string[]; issues?: Array<{ slug: string; modName: string; error: string; details?: string; timestamp: number }>; error?: string }>
       

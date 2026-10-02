@@ -1386,6 +1386,37 @@ app.whenReady().then(() => {
     }
   );
 
+  ipcMain.handle("mods:updateProfileMods", async (event, profileId: string) => {
+    try {
+      const profile = await profiles.getProfileById(profileId);
+      if (!profile) {
+        return { ok: false, error: "Profile not found" };
+      }
+      const installations = await profiles.getInstallationsByProfile(profile.name);
+      let results: Awaited<ReturnType<typeof mods.updateProfileModsToLatest>> = [];
+      const locks = installations.map((i) => i.id);
+      // Hold every installation's sync lock so a concurrent launch can't touch mods/ mid-update.
+      const run = async (index: number): Promise<void> => {
+        if (index >= locks.length) {
+          results = await mods.updateProfileModsToLatest(profileId, (installationId, progress) => {
+            event.sender.send("mods:downloadProgress", { installationId, ...progress });
+          });
+          return;
+        }
+        await runWithInstallationSyncLock(locks[index], () => run(index + 1));
+      };
+      await run(0);
+
+      for (const r of results) {
+        await profiles.updateInstallation(r.installationId, { modIssues: r.issues } as any);
+      }
+      return { ok: true, updatedCount: results.length, results };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { ok: false, error: msg };
+    }
+  });
+
   ipcMain.handle(
     "mods:syncInstallation",
     async (event, installationId: string) => {

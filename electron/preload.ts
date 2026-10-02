@@ -97,6 +97,8 @@ contextBridge.exposeInMainWorld("jojoclient", {
   loadModsBundleFromFile: () => ipcRenderer.invoke("mods:loadBundleFromFile"),
   syncProfileModsToInstallations: (profileId: string) =>
     ipcRenderer.invoke("mods:syncProfileToInstallations", profileId),
+  updateProfileMods: (profileId: string) =>
+    ipcRenderer.invoke("mods:updateProfileMods", profileId),
   syncInstallationMods: (installationId: string) =>
     ipcRenderer.invoke("mods:syncInstallation", installationId),
   

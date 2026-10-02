@@ -251,6 +251,34 @@ export function ModsScreen({
     }
   }
 
+  async function handleUpdateAllMods() {
+    if (!selectedProfile) return;
+    if (!window.jojoclient.updateProfileMods) {
+      onInfo("Update mods", "Mod update API not available. Please restart the app.");
+      return;
+    }
+    onBusy("Updating mods to latest versions...");
+    try {
+      const result = await window.jojoclient.updateProfileMods(selectedProfile.id);
+      if (!result.ok) {
+        throw new Error(result.error || "Mod update failed");
+      }
+      const failedCount = (result.results ?? []).reduce((sum, r) => sum + r.failed.length, 0);
+      onRefresh();
+      onInfo(
+        "Update mods",
+        failedCount > 0
+          ? `Updated mods, but ${failedCount} mod(s) could not be updated. Check the installation's mod issues for details.`
+          : `All mods updated in ${result.updatedCount ?? 0} installation(s).`
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      onInfo("Update mods", msg);
+    } finally {
+      onBusyDone();
+    }
+  }
+
   async function handleSaveExportToFile() {
     if (!exportModsModal.bundle || !selectedProfile) return;
     try {
@@ -686,6 +714,13 @@ export function ModsScreen({
                 onClick={() => setImportModsModal({ show: true, code: "" })}
               >
                 Import
+              </button>
+              <button
+                className="mods-action-btn"
+                onClick={handleUpdateAllMods}
+                disabled={mods.length === 0}
+              >
+                Update Mods
               </button>
             </div>
           </div>
