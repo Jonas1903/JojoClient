@@ -13,7 +13,32 @@
     gtag('js', new Date());
     gtag('config', 'G-GHLCYPFTFK');
   </script>
-  <title>JojoClient — Minecraft, finally a tool</title>
+  <title>JojoClient — Free Fabric Minecraft Launcher for Windows</title>
+  <meta name="description" content="One mod list for every Minecraft version. JojoClient is a free Fabric launcher for Windows that syncs your Modrinth mods into every installation, checks dependencies before launch, and shares your setup as a code.">
+  <link rel="canonical" href="https://jojoclient.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="JojoClient">
+  <meta property="og:url" content="https://jojoclient.com/">
+  <meta property="og:title" content="JojoClient — One mod list. Every Minecraft version.">
+  <meta property="og:description" content="A free Fabric launcher for Windows. Add mods from Modrinth once, JojoClient syncs them into every installation and catches broken dependencies before the game crashes.">
+  <meta property="og:image" content="https://jojoclient.com/screenshots/hero.png">
+  <meta property="og:image:width" content="2559">
+  <meta property="og:image:height" content="1439">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "JojoClient",
+    "description": "Free Fabric Minecraft launcher for Windows. One mod list for every Minecraft version, mods from Modrinth, dependency checks before launch and setup sharing via code.",
+    "url": "https://jojoclient.com/",
+    "downloadUrl": "https://github.com/Jonas1903/JojoClient/releases/latest",
+    "operatingSystem": "Windows",
+    "applicationCategory": "GameApplication",
+    "image": "https://jojoclient.com/screenshots/hero.png",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -925,6 +950,18 @@
       });
     }
     wireDownloadButtons();
+
+    // GA4 download-click event. gtag only exists after statistics consent (Cookiebot).
+    document.querySelectorAll('.hero-download, .cta-download, .nav-download').forEach(el => {
+      el.addEventListener('click', () => {
+        if (typeof window.gtag !== 'function') return;
+        window.gtag('event', 'download_click', {
+          button_location: el.classList[0].replace('-download', ''),
+          link_url: el.href,
+          transport_type: 'beacon'
+        });
+      });
+    });
   </script>
 
 </body>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jojoclient.com/sitemap.xml
