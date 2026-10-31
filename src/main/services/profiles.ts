@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { Profile, ProfilesIndex, InstallationsIndex, Installation } from '../types';
 import { getBasePath } from '../utils/baseFolder';
+import { mirrorDirectory } from '../utils/dirSync';
 import { getLatestFabricLoaderForMcVersion } from './versions';
 
 // Generate UUID v4 without external dependency
@@ -12,6 +13,16 @@ function uuidv4(): string {
 
 const PROFILES_INDEX_VERSION = 1;
 const INSTALLATIONS_INDEX_VERSION = 1;
+
+// Data repositories that mods download into config/ and keep up to date
+// themselves. They are not settings, and syncing them meant copying ~36k files on
+// every launch and exit, so each installation keeps its own copy.
+const CONFIG_SYNC_EXCLUDES = [
+  'skyblocker/item-repo',
+  'notenoughupdates/repo',
+  // NEU compares this against the remote to decide whether repo/ needs a download.
+  'notenoughupdates/currentCommit.json',
+];
 
 // ============================================
 // Template Config Version Tracking
@@ -942,11 +953,8 @@ export async function syncTemplateSettingsToInstallation(installationId: string)
   const destConfig = path.join(installationDir, "config");
   
   if (shouldSyncConfig && fs.existsSync(srcConfig)) {
-    // Clear destination config and copy fresh from template
-    if (fs.existsSync(destConfig)) {
-      fs.rmSync(destConfig, { recursive: true, force: true });
-    }
-    copyDirectoryRecursive(srcConfig, destConfig);
+    // Make the installation config match the template, copying only changed files
+    await mirrorDirectory(srcConfig, destConfig, { exclude: CONFIG_SYNC_EXCLUDES });
     configSynced = true;
   } else if (!shouldSyncConfig) {
     versionMismatch = true;
@@ -1117,11 +1125,12 @@ export async function updateTemplateSettingsFromInstallation(installationId: str
   
   if (shouldSyncConfig) {
     if (fs.existsSync(srcConfig)) {
-      // Clear destination config and copy fresh from installation
-      if (fs.existsSync(destConfig)) {
-        fs.rmSync(destConfig, { recursive: true, force: true });
-      }
-      copyDirectoryRecursive(srcConfig, destConfig);
+      // Make the template config match the installation, copying only changed files.
+      // Mod repos copied into the template by older versions are pruned here.
+      await mirrorDirectory(srcConfig, destConfig, {
+        exclude: CONFIG_SYNC_EXCLUDES,
+        pruneExcluded: true,
+      });
       writeTemplateConfigMeta(profileName, installationVersion);
       configSynced = true;
     }
