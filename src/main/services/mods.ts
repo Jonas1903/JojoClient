@@ -14,6 +14,7 @@ import {
 import { isGameRunning } from "./launcher";
 import { DEFAULT_MC_VERSION } from "./versions";
 import type { ModIssue } from "../types";
+import { readJarModMeta } from "../utils/jarMeta";
 
 // ============================================
 // Mod ID Extraction from JAR
@@ -1151,7 +1152,7 @@ function hasJarFiles(modsDir: string): boolean {
   return fs.readdirSync(modsDir).some((file) => file.toLowerCase().endsWith(".jar"));
 }
 
-function snapshotInstalledModVersions(modsDir: string): Map<string, string> {
+async function snapshotInstalledModVersions(modsDir: string): Promise<Map<string, string>> {
   const snapshot = new Map<string, string>();
   if (!fs.existsSync(modsDir)) return snapshot;
 
@@ -1159,10 +1160,10 @@ function snapshotInstalledModVersions(modsDir: string): Map<string, string> {
     .readdirSync(modsDir)
     .filter((file) => file.toLowerCase().endsWith(".jar") || file.toLowerCase().endsWith(".jar.disabled"));
 
-  for (const file of entries) {
-    const meta = readFabricModMeta(path.join(modsDir, file));
-    if (!meta?.id || !meta.version) continue;
-    snapshot.set(meta.id, meta.version);
+  const metas = await Promise.all(entries.map((file) => readJarModMeta(path.join(modsDir, file))));
+  for (const meta of metas) {
+    if (!meta?.fabric.id || !meta.fabric.version) continue;
+    snapshot.set(meta.fabric.id, meta.fabric.version);
   }
 
   return snapshot;
@@ -1191,10 +1192,10 @@ function cleanupConfigsForChangedModVersions(
   }
 }
 
-function findInstalledModDetailsById(
+async function findInstalledModDetailsById(
   modsDir: string,
   modId: string
-): { name?: string; filename?: string; jarPath?: string; isDisabled?: boolean } | null {
+): Promise<{ name?: string; filename?: string; jarPath?: string; isDisabled?: boolean } | null> {
   if (!fs.existsSync(modsDir)) return null;
 
   const targetId = modId.toLowerCase();
@@ -1210,7 +1211,7 @@ function findInstalledModDetailsById(
 
   for (const entry of entries) {
     const fullPath = path.join(modsDir, entry);
-    const meta = readFabricModMeta(fullPath);
+    const meta = (await readJarModMeta(fullPath))?.fabric;
     if (!meta?.id) continue;
     if (meta.id.toLowerCase() !== targetId) continue;
     return {
@@ -1241,10 +1242,10 @@ function extractCrashingModId(crashContent: string): string | null {
   return null;
 }
 
-function recoverFromLatestConfigParseCrash(
+async function recoverFromLatestConfigParseCrash(
   installationDir: string,
   minecraftVersion: string
-): ModIssue[] {
+): Promise<ModIssue[]> {
   const crashReportsDir = path.join(installationDir, "crash-reports");
   const modsDir = path.join(installationDir, "mods");
   const configDir = path.join(installationDir, "config");
@@ -1280,7 +1281,7 @@ function recoverFromLatestConfigParseCrash(
   const modId = extractCrashingModId(content);
   if (!modId) return [];
 
-  const modDetails = findInstalledModDetailsById(modsDir, modId);
+  const modDetails = await findInstalledModDetailsById(modsDir, modId);
   // Detect config-parse crashes from multiple JSON/TOML parsers.
   // Gson uses JsonSyntaxException/Expected BEGIN_*; kotlinx.serialization
   // and NightConfig use different messages; most parsers include "Exception"
@@ -1583,15 +1584,6 @@ function satisfiesVersionRange(installed: string, range: string): boolean {
   return false;
 }
 
-type FabricModJson = {
-  id?: string;
-  version?: string;
-  name?: string;
-  depends?: Record<string, string | string[]>;
-  provides?: string[];
-  jars?: Array<{ file: string }>;
-};
-
 type InstalledModMeta = {
   id: string;
   version: string;
@@ -1628,55 +1620,6 @@ function getRuntimeDependencyVersion(
 }
 
 /**
- * Reads fabric.mod.json metadata from a mod JAR.
- */
-function readFabricModMeta(jarPath: string): FabricModJson | null {
-  try {
-    const zip = new AdmZip(jarPath);
-    const entry = zip.getEntry("fabric.mod.json");
-    if (!entry) return null;
-    const raw = zip.readAsText(entry);
-    return JSON.parse(raw) as FabricModJson;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Reads all sub-module IDs + versions from nested JARs listed in the
- * fabric.mod.json `jars` field (`META-INF/jars/...`).  Fabric API bundles
- * dozens of sub-modules this way (fabric-resource-loader-v0, etc.).
- */
-function readNestedModIds(
-  jarPath: string,
-  jarsField: Array<{ file: string }>
-): Array<{ id: string; version: string }> {
-  const results: Array<{ id: string; version: string }> = [];
-  try {
-    const parentZip = new AdmZip(jarPath);
-    for (const jar of jarsField) {
-      try {
-        const nestedEntry = parentZip.getEntry(jar.file);
-        if (!nestedEntry) continue;
-        const nestedBuffer = nestedEntry.getData();
-        const nestedZip = new AdmZip(nestedBuffer);
-        const nestedMeta = nestedZip.getEntry("fabric.mod.json");
-        if (!nestedMeta) continue;
-        const parsed = JSON.parse(nestedZip.readAsText(nestedMeta)) as FabricModJson;
-        if (parsed.id && parsed.version) {
-          results.push({ id: parsed.id, version: parsed.version });
-        }
-      } catch {
-        // Skip unreadable nested JARs
-      }
-    }
-  } catch {
-    // Parent JAR read error — already handled elsewhere
-  }
-  return results;
-}
-
-/**
  * Scans every .jar in modsDir and validates that each mod's required
  * dependencies are present at a compatible version.
  *
@@ -1686,21 +1629,23 @@ function readNestedModIds(
  *
  * Returns the list of issues generated during validation.
  */
-function validateModDependencies(
+async function validateModDependencies(
   modsDir: string,
   context: DependencyValidationContext
-): ModIssue[] {
+): Promise<ModIssue[]> {
   if (!fs.existsSync(modsDir)) return [];
 
   // 1. Build registry of all installed mods
   const jars = fs.readdirSync(modsDir).filter((f) => f.toLowerCase().endsWith(".jar"));
   const modRegistry = new Map<string, InstalledModMeta>();
   const allMods: InstalledModMeta[] = [];
+  const jarMetas = await Promise.all(jars.map((filename) => readJarModMeta(path.join(modsDir, filename))));
 
-  for (const filename of jars) {
+  for (const [index, filename] of jars.entries()) {
     const jarPath = path.join(modsDir, filename);
-    const meta = readFabricModMeta(jarPath);
-    if (!meta?.id || !meta.version) continue;
+    const jarMeta = jarMetas[index];
+    const meta = jarMeta?.fabric;
+    if (!jarMeta || !meta?.id || !meta.version) continue;
 
     // Normalize depends: fabric.mod.json allows string or string[] values
     const normalizedDeps: Record<string, string[]> = {};
@@ -1743,20 +1688,17 @@ function validateModDependencies(
     // Register sub-modules from nested JARs (e.g. Fabric API bundles
     // fabric-resource-loader-v0, fabric-rendering-v1, etc. inside
     // META-INF/jars/).  These are loaded at runtime by Fabric Loader.
-    if (Array.isArray(meta.jars) && meta.jars.length > 0) {
-      const nested = readNestedModIds(jarPath, meta.jars);
-      for (const sub of nested) {
-        if (!modRegistry.has(sub.id.toLowerCase())) {
-          // Create a synthetic entry so deps on sub-modules are satisfied
-          modRegistry.set(sub.id.toLowerCase(), {
-            id: sub.id,
-            version: sub.version,
-            name: sub.id,
-            filename,
-            jarPath,
-            depends: {},
-          });
-        }
+    for (const sub of jarMeta.nested) {
+      if (!modRegistry.has(sub.id.toLowerCase())) {
+        // Create a synthetic entry so deps on sub-modules are satisfied
+        modRegistry.set(sub.id.toLowerCase(), {
+          id: sub.id,
+          version: sub.version,
+          name: sub.id,
+          filename,
+          jarPath,
+          depends: {},
+        });
       }
     }
   }
@@ -1949,8 +1891,6 @@ export async function syncProfileModsToInstallation(
     fabricLoaderVersion: installation.fabricLoaderVersion,
     configDir,
   };
-  const previousModVersions = snapshotInstalledModVersions(modsDir);
-
   const modsList = loadProfileModList(profile.name);
   const enabledMods = modsList.filter((m) => m.enabled !== false);
   const explicitSlugs = enabledMods.map((m) => m.slug);
@@ -1985,11 +1925,11 @@ export async function syncProfileModsToInstallation(
     console.log(`✅ Mods already synced for installation ${installationId}, validating only`);
     onProgress?.({ phase: "start", current: 0, total: 0 });
     onProgress?.({ phase: "validate", current: 0, total: 0 });
-    const crashRecoveryIssues = recoverFromLatestConfigParseCrash(
+    const crashRecoveryIssues = await recoverFromLatestConfigParseCrash(
       installationDir,
       installation.minecraftVersion
     );
-    const validationIssues = validateModDependencies(modsDir, runtimeContext);
+    const validationIssues = await validateModDependencies(modsDir, runtimeContext);
     onProgress?.({ phase: "done", current: 0, total: 0 });
     const combinedIssues = [...crashRecoveryIssues, ...validationIssues];
     const failedFromValidation = Array.from(
@@ -2003,6 +1943,9 @@ export async function syncProfileModsToInstallation(
       skipped: combinedIssues.length === 0 ? true : undefined,
     };
   }
+
+  // Taken before the folder is cleared, to detect mod version changes afterwards.
+  const previousModVersions = await snapshotInstalledModVersions(modsDir);
 
   // Try to clear mods folder - if it fails (EBUSY), the game is running with these mods
   if (fs.existsSync(modsDir)) {
@@ -2030,7 +1973,7 @@ export async function syncProfileModsToInstallation(
   const failed: string[] = [];
   const allIssues: ModIssue[] = [];
   allIssues.push(
-    ...recoverFromLatestConfigParseCrash(installationDir, installation.minecraftVersion)
+    ...(await recoverFromLatestConfigParseCrash(installationDir, installation.minecraftVersion))
   );
   // Seed downloadedSlugs with the resolved set so downloadMod won't re-fetch deps
   // it already knows about from resolveAllSlugsWithDependencies.
@@ -2065,7 +2008,7 @@ export async function syncProfileModsToInstallation(
   // Validate dependencies: scan every downloaded jar, check its fabric.mod.json
   // `depends` block, and disable mods whose deps are missing or incompatible.
   onProgress?.({ phase: "validate", current: 0, total: 0 });
-  const validationIssues = validateModDependencies(modsDir, runtimeContext);
+  const validationIssues = await validateModDependencies(modsDir, runtimeContext);
   if (validationIssues.length > 0) {
     allIssues.push(...validationIssues);
     for (const issue of validationIssues) {
@@ -2075,7 +2018,7 @@ export async function syncProfileModsToInstallation(
     }
   }
 
-  const currentModVersions = snapshotInstalledModVersions(modsDir);
+  const currentModVersions = await snapshotInstalledModVersions(modsDir);
   cleanupConfigsForChangedModVersions(configDir, previousModVersions, currentModVersions);
 
   onProgress?.({ phase: "done", current: total, total });
