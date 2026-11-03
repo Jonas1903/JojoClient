@@ -43,3 +43,6 @@ BUG_REPORT.md
 *.njsproj
 *.sln
 *.sw?
+
+# JojoClient Performance mod (separate project, kept local)
+mods/
