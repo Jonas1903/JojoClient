@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
 import AdmZip from "adm-zip";
 import { readSettings } from "../utils/storage";
+import { checkContent, checkFileOnDisk, findInvalidFiles } from "../utils/fileCheck";
 import {
   getMinecraftVersionDetails,
   getFabricVersionDetails,
@@ -90,41 +90,6 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function verifyFileWithReason(
-  filePath: string,
-  expectedSha1?: string,
-  expectedSize?: number
-): { ok: boolean; reason: string } {
-  if (!fs.existsSync(filePath)) {
-    return { ok: false, reason: "file-missing" };
-  }
-
-  const stats = fs.statSync(filePath);
-  if (expectedSize !== undefined && stats.size !== expectedSize) {
-    return {
-      ok: false,
-      reason: `size-mismatch(expected=${expectedSize},actual=${stats.size})`,
-    };
-  }
-
-  if (expectedSha1) {
-    const content = fs.readFileSync(filePath);
-    const hash = crypto.createHash("sha1").update(content).digest("hex");
-    if (hash !== expectedSha1) {
-      return {
-        ok: false,
-        reason: `sha1-mismatch(expected=${expectedSha1},actual=${hash})`,
-      };
-    }
-  }
-
-  return { ok: true, reason: "ok" };
-}
-
-function verifyFile(filePath: string, expectedSha1?: string, expectedSize?: number): boolean {
-  return verifyFileWithReason(filePath, expectedSha1, expectedSize).ok;
-}
-
 async function atomicReplaceFile(tempPath: string, targetPath: string): Promise<void> {
   try {
     await fs.promises.rename(tempPath, targetPath);
@@ -153,17 +118,16 @@ async function downloadFile(task: DownloadTask, contextLabel: string): Promise<v
       }
 
       const content = Buffer.from(await response.arrayBuffer());
-      await fs.promises.mkdir(path.dirname(task.path), { recursive: true });
-      await fs.promises.writeFile(tempPath, content);
-
-      const tempValidation = verifyFileWithReason(tempPath, task.sha1, task.size);
-      if (!tempValidation.ok) {
-        throw new Error(`downloaded-temp-invalid(${tempValidation.reason})`);
+      const contentValidation = checkContent(content, task.sha1, task.size);
+      if (!contentValidation.ok) {
+        throw new Error(`downloaded-content-invalid(${contentValidation.reason})`);
       }
 
+      await fs.promises.mkdir(path.dirname(task.path), { recursive: true });
+      await fs.promises.writeFile(tempPath, content);
       await atomicReplaceFile(tempPath, task.path);
 
-      const finalValidation = verifyFileWithReason(task.path, task.sha1, task.size);
+      const finalValidation = await checkFileOnDisk(task.path, content.length);
       if (!finalValidation.ok) {
         await fs.promises.rm(task.path, { force: true });
         throw new Error(`downloaded-final-invalid(${finalValidation.reason})`);
@@ -531,21 +495,19 @@ async function downloadLibraries(
   }
 
   const requiredFiles = Array.from(requiredByPath.values());
-  const toDownload = requiredFiles
-    .filter((file) => !verifyFile(file.path, file.sha1, file.size))
-    .map<DownloadTask>((file) => ({
-      url: file.url,
-      path: file.path,
-      sha1: file.sha1,
-      size: file.size,
-      label: file.label,
-    }));
+  const toDownload = (await findInvalidFiles(requiredFiles)).map<DownloadTask>((file) => ({
+    url: file.url,
+    path: file.path,
+    sha1: file.sha1,
+    size: file.size,
+    label: file.label,
+  }));
 
-  // Download missing libraries with verification and retries.
+  // Download missing libraries. downloadFile hash-checks each one before it lands.
   for (let i = 0; i < toDownload.length; i++) {
     const task = toDownload[i];
     onProgress(i + 1, toDownload.length, path.basename(task.path));
-    
+
     try {
       await downloadFile(task, task.label || path.basename(task.path));
     } catch (error) {
@@ -554,26 +516,11 @@ async function downloadLibraries(
     }
   }
 
-  // Final audit: verify everything needed for classpath/natives exists and is valid.
-  const invalidFiles = requiredFiles.filter((file) => !verifyFile(file.path, file.sha1, file.size));
-  for (let i = 0; i < invalidFiles.length; i++) {
-    const file = invalidFiles[i];
-    onProgress(i + 1, invalidFiles.length, path.basename(file.path));
-    await downloadFile(
-      {
-        url: file.url,
-        path: file.path,
-        sha1: file.sha1,
-        size: file.size,
-        label: file.label,
-      },
-      file.label
-    );
-  }
-
-  const unresolved = requiredFiles.find((file) => !verifyFile(file.path, file.sha1, file.size));
+  // Final audit: everything needed for classpath/natives must still be on disk
+  // (e.g. not quarantined by antivirus right after the download).
+  const [unresolved] = toDownload.length > 0 ? await findInvalidFiles(requiredFiles) : [];
   if (unresolved) {
-    const reason = verifyFileWithReason(unresolved.path, unresolved.sha1, unresolved.size).reason;
+    const reason = (await checkFileOnDisk(unresolved.path, unresolved.size)).reason;
     throw new Error(
       `Library validation failed before launch. label=${unresolved.label} path=${unresolved.path} reason=${reason}`
     );
@@ -599,7 +546,11 @@ async function downloadAssets(
   const assetIndex = versionDetails.assetIndex;
   const indexPath = path.join(indexDir, `${assetIndex.id}.json`);
 
-  if (!verifyFile(indexPath, assetIndex.sha1, assetIndex.size)) {
+  // The index is small and read anyway, so it keeps a full hash check: Mojang can
+  // republish an index under the same id.
+  const readIndex = () => fs.promises.readFile(indexPath).catch(() => null);
+  let indexBuffer = await readIndex();
+  if (!indexBuffer || !checkContent(indexBuffer, assetIndex.sha1, assetIndex.size).ok) {
     await downloadFile(
       {
         url: assetIndex.url,
@@ -610,30 +561,25 @@ async function downloadAssets(
       },
       `asset-index:${assetIndex.id}`
     );
+    indexBuffer = await fs.promises.readFile(indexPath);
   }
 
   // Parse asset index
-  const indexContent = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+  const indexContent = JSON.parse(indexBuffer.toString("utf-8"));
   const objects = indexContent.objects as Record<string, { hash: string; size: number }>;
-  const objectEntries = Object.entries(objects);
 
-  // Build download tasks
-  const tasks: DownloadTask[] = [];
-  for (const [, asset] of objectEntries) {
+  // Build download tasks for objects that are missing or the wrong size
+  const allObjects: DownloadTask[] = Object.values(objects).map((asset) => {
     const hashPrefix = asset.hash.substring(0, 2);
-    const objectPath = path.join(objectsDir, hashPrefix, asset.hash);
-    const objectUrl = `https://resources.download.minecraft.net/${hashPrefix}/${asset.hash}`;
-
-    if (!verifyFile(objectPath, asset.hash, asset.size)) {
-      tasks.push({
-        url: objectUrl,
-        path: objectPath,
-        sha1: asset.hash,
-        size: asset.size,
-        label: `asset-object:${asset.hash}`,
-      });
-    }
-  }
+    return {
+      url: `https://resources.download.minecraft.net/${hashPrefix}/${asset.hash}`,
+      path: path.join(objectsDir, hashPrefix, asset.hash),
+      sha1: asset.hash,
+      size: asset.size,
+      label: `asset-object:${asset.hash}`,
+    };
+  });
+  const tasks = await findInvalidFiles(allObjects);
 
   // Download missing assets
   const failures: Array<{ hash: string; url: string }> = [];
@@ -669,7 +615,7 @@ async function downloadClient(
 
   const clientInfo = versionDetails.downloads.client;
 
-  if (!verifyFile(clientPath, clientInfo.sha1, clientInfo.size)) {
+  if (!(await checkFileOnDisk(clientPath, clientInfo.size)).ok) {
     onProgress(0, 1, `${versionId}.jar`);
     await downloadFile(
       {
