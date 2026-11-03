@@ -50,7 +50,7 @@ Your Microsoft sign-in goes straight to Microsoft, Xbox Live and Mojang (`src/ma
 
 ### Build from source
 
-Requires Windows, Node.js 20 and Git.
+Requires Windows, Node.js 22 or newer and Git.
 
 ```bash
 git clone https://github.com/Jonas1903/JojoClient.git
