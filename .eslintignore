@@ -1,0 +1,4 @@
+electron/preload.js
+dist
+dist-electron
+node_modules

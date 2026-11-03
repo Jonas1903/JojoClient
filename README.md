@@ -42,6 +42,35 @@ JojoClient is a free, Fabric-native Minecraft launcher for Windows. Keep one mod
 
 ---
 
+## Open source
+
+The full source code of the launcher is in this repository. You can read what it does with your account and your files, build it yourself, or report problems in the [issues](https://github.com/Jonas1903/JojoClient/issues).
+
+Your Microsoft sign-in goes straight to Microsoft, Xbox Live and Mojang (`src/main/services/auth.ts`). JojoClient has no server of its own and never sees your password.
+
+### Build from source
+
+Requires Windows, Node.js 20 and Git.
+
+```bash
+git clone https://github.com/Jonas1903/JojoClient.git
+cd JojoClient
+npm ci
+npm run build
+```
+
+The installer is written to `release/<version>/`. For development, `npm run dev` starts the app with hot reload, and `npm run test` runs the test suite.
+
+### Verify a download
+
+From v1.0.8 on, releases are built by [GitHub Actions](.github/workflows/release.yml) from the code in this repository, and every installer comes with a signed build attestation. With the [GitHub CLI](https://cli.github.com/) you can check that an installer was built from this repository:
+
+```bash
+gh attestation verify JojoClient-Windows-<version>-Setup.exe -R Jonas1903/JojoClient
+```
+
+---
+
 ## Limitations
 
 - Windows only
@@ -61,4 +90,4 @@ JojoClient is a free, Fabric-native Minecraft launcher for Windows. Keep one mod
 
 ## License
 
-Proprietary. Not affiliated with Mojang or Microsoft.
+JojoClient is licensed under the [GNU General Public License v3.0](LICENSE). Not affiliated with Mojang or Microsoft.

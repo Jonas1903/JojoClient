@@ -1,0 +1,45 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-electron
+dist-ssr
+release/
+*.local
+
+# Environment variables (contains secrets — NEVER commit)
+.env
+.env.*
+
+# Debug artifacts
+debug_*
+
+# Internal planning and AI tooling (repo is public — never commit)
+marketing/
+internal/
+.claude/
+.kilo/
+CLAUDE.md
+DESIGN.md
+BUG_REPORT.md
+.github/copilot-instructions.md
+.github/instructions/
+*.backup
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

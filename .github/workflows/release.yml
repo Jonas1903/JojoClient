@@ -1,0 +1,56 @@
+# Builds the Windows installer from this repository and publishes it as a
+# GitHub release. Runs when a version tag (v1.2.3) is pushed. The tag must
+# match "version" in package.json.
+#
+# Every installer gets a build provenance attestation, so anyone can check
+# that it was built here:
+#   gh attestation verify JojoClient-Windows-<version>-Setup.exe -R Jonas1903/JojoClient
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Check tag matches package.json
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Type check
+        run: |
+          npx tsc -p tsconfig.json --noEmit
+          npx tsc -p tsconfig.electron.json --noEmit
+
+      - run: npm run test
+
+      - name: Build and publish
+        run: npm run publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/*/JojoClient-Windows-*-Setup.exe
